@@ -1,4 +1,12 @@
-# LifeOS
+# LifeOS 🧠
+
+[![Live Demo](https://img.shields.io/badge/🚀%20Live%20Demo-Streamlit%20Cloud-6366f1?style=for-the-badge&logo=streamlit&logoColor=white)](https://lifeos-ofnibiwxcpdemar5vwtswn.streamlit.app/)
+[![Tests](https://img.shields.io/badge/Tests-75%20Passed-22c55e?style=for-the-badge&logo=pytest&logoColor=white)](./tests/)
+[![Python](https://img.shields.io/badge/Python-3.13-3b82f6?style=for-the-badge&logo=python&logoColor=white)](https://python.org)
+[![SQLite](https://img.shields.io/badge/SQLite-Raw%20SQL%20%2B%20ORM-f59e0b?style=for-the-badge&logo=sqlite&logoColor=white)](./database/)
+[![ML](https://img.shields.io/badge/ML-Scikit--Learn-ec4899?style=for-the-badge&logo=scikit-learn&logoColor=white)](./ml/)
+
+> 🔗 **[Live App →](https://lifeos-ofnibiwxcpdemar5vwtswn.streamlit.app/)** — Click "Explore Demo Data" to see everything in action instantly.
 
 A personal Study, Health, and Finance analytics platform, designed to be opened
 every day — not a portfolio demo. Built to also demonstrate real SQL, Python,
@@ -82,7 +90,7 @@ lifeos/
 │   ├── export.py                    # CSV export
 │   ├── date_helpers.py               # Date/week utilities
 │   └── ui_components.py               # Shared CSS, empty states, progress widgets
-└── tests/                        # 74 tests across all modules
+└── tests/                        # 75 tests across all modules
 ```
 
 ## Tech Stack
@@ -234,7 +242,7 @@ python ml/train.py
 pytest
 ```
 
-74 tests covering: BMR/TDEE/BMI/calorie-target calculations (including the
+75 tests covering: BMR/TDEE/BMI/calorie-target calculations (including the
 no-universal-1200-floor requirement), study streaks and completion, finance
 budgets and category totals, raw SQL (JOINs, CTEs, `HAVING`, calendar-based
 rolling windows, missing-date behavior), ML preprocessing (no NaNs, no target
@@ -244,9 +252,22 @@ Score formula.
 
 ## Deployment
 
-Target: **Streamlit Community Cloud**. The app works from a clean environment
-with no local paths or personal data baked in — `data/lifeos.db` and
-`ml/models/*.pkl` are gitignored, and the onboarding flow means a fresh
+**Live on Streamlit Community Cloud:**
+🔗 **[https://lifeos-ofnibiwxcpdemar5vwtswn.streamlit.app/](https://lifeos-ofnibiwxcpdemar5vwtswn.streamlit.app/)**
+
+Click **"Explore Demo Data"** on the onboarding screen to see all features instantly with ~5 weeks of sample data.
+
+To run locally:
+
+```bash
+git clone https://github.com/DeepakChouhan18/LifeOS.git
+cd LifeOS
+pip install -r requirements.txt
+streamlit run app.py
+```
+
+The app works from a clean environment with no local paths or personal data baked in —
+`data/lifeos.db` and `ml/models/*.pkl` are gitignored, and the onboarding flow means a fresh
 deployment starts empty (or with demo data, by the visitor's own choice).
 
 ## Limitations

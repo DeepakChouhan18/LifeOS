@@ -268,8 +268,7 @@ def inject_custom_css():
        INPUTS / SELECTS
     ==================================================================== */
 
-    .stTextInput > div > div > input,
-    .stNumberInput > div > div > input,
+    div[data-baseweb="input"],
     .stTextArea > div > div > textarea,
     .stSelectbox > div > div > div {
         background: #111927 !important;
@@ -278,11 +277,26 @@ def inject_custom_css():
         color: #e2e8f0 !important;
         font-size: 0.875rem !important;
     }
-    .stTextInput > div > div > input:focus,
-    .stNumberInput > div > div > input:focus,
+    div[data-baseweb="input"] > input {
+        background: transparent !important;
+        border: none !important;
+        color: #e2e8f0 !important;
+        font-size: 0.875rem !important;
+        box-shadow: none !important;
+    }
+    div[data-baseweb="input"]:focus-within,
     .stTextArea > div > div > textarea:focus {
         border-color: #6366f1 !important;
         box-shadow: 0 0 0 2px rgba(99,102,241,0.15) !important;
+    }
+    div[data-baseweb="input"] button {
+        background: transparent !important;
+        border: none !important;
+        color: #94a3b8 !important;
+        box-shadow: none !important;
+    }
+    div[data-baseweb="input"] button:hover {
+        color: #f8fafc !important;
     }
 
     /* ====================================================================

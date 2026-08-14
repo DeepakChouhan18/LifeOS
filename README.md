@@ -1,62 +1,40 @@
 # LifeOS 🧠
 
 [![Live Demo](https://img.shields.io/badge/🚀%20Live%20Demo-Streamlit%20Cloud-6366f1?style=for-the-badge&logo=streamlit&logoColor=white)](https://lifeos-ofnibiwxcpdemar5vwtswn.streamlit.app/)
-[![Tests](https://img.shields.io/badge/Tests-75%20Passed-22c55e?style=for-the-badge&logo=pytest&logoColor=white)](./tests/)
+[![Tests](https://img.shields.io/badge/Tests-97%20Passed-22c55e?style=for-the-badge&logo=pytest&logoColor=white)](./tests/)
 [![Python](https://img.shields.io/badge/Python-3.13-3b82f6?style=for-the-badge&logo=python&logoColor=white)](https://python.org)
 [![SQLite](https://img.shields.io/badge/SQLite-Raw%20SQL%20%2B%20ORM-f59e0b?style=for-the-badge&logo=sqlite&logoColor=white)](./database/)
 [![ML](https://img.shields.io/badge/ML-Scikit--Learn-ec4899?style=for-the-badge&logo=scikit-learn&logoColor=white)](./ml/)
 
-> 🔗 **[Live App →](https://lifeos-ofnibiwxcpdemar5vwtswn.streamlit.app/)** — Click "Explore Demo Data" to see everything in action instantly.
+> 🔗 **[Live App →](https://lifeos-ofnibiwxcpdemar5vwtswn.streamlit.app/)** — Click "Explore Demo Data" or create an account to see everything in action instantly.
 
-A personal Study, Health, and Finance analytics platform, designed to be opened
-every day — not a portfolio demo. Built to also demonstrate real SQL, Python,
-and applied ML skills along the way.
+A personal Study, Health, and Finance analytics platform, designed to be opened every day. Built to demonstrate real SQL, Python, machine learning, secure multi-user authentication, and production UI engineering.
 
 ## Overview
 
-LifeOS tracks three areas of daily life — study, health/fitness, and personal
-finance — in one SQLite-backed Streamlit app, with an Overview dashboard that
-pulls them together, and an Insights tab that applies real machine learning to
-your own logged data.
+LifeOS tracks three areas of daily life — study, health/fitness, and personal finance — in one SQLite-backed Streamlit application, with a unified Overview dashboard that pulls them together, secure multi-user authentication with bcrypt password hashing, and an Insights tab that applies real machine learning to your own logged data.
 
 ## Problem
 
-Tracking study time, meals/workouts, and expenses across separate apps makes it
-hard to see patterns or stay consistent. LifeOS puts all three in one place with
-meaningful analytics instead of just storing numbers.
+Tracking study time, meals/workouts, and expenses across separate apps makes it hard to see patterns or stay consistent. LifeOS puts all three in one place with meaningful analytics instead of just storing numbers.
 
 ## Solution
 
-Three independent modules (Study, Health, Finance) that each feel like a
-complete mini-application, plus a combined Overview and an Insights tab with
-real SQL analytics and two ML models trained on your own history.
+Three independent modules (Study, Health, Finance) that each feel like a complete mini-application, plus a combined Overview, an Insights tab with real SQL analytics and ML models, and secure user data isolation.
 
 ## Key Features
 
-- **Onboarding choice**: Start Fresh (empty personal database) or Explore Demo
-  Data (clearly labeled, resettable sample data) — no fake data silently
-  injected into a real account.
-- **Automatic health targets**: BMR (Mifflin-St Jeor), TDEE, calorie target,
-  protein target, and BMI are all calculated from your profile — you never
-  enter maintenance calories manually. Recalculates instantly when you edit
-  your profile.
-- **Fast daily logging**: quick-add food (with a Recent Foods shortcut),
-  one-tap water logging, a real study session timer that auto-saves on finish,
-  and a quick expense entry form.
-- **Edit/delete everywhere**: every logged record (food, workout, weight,
-  study session, task, expense) can be edited or deleted, not just added.
-- **Personal Consistency Score**: a simple, user-configurable weighted average
-  across the three modules — explicitly *not* presented as an objective "life
-  score." Weights are adjustable in Settings.
-- **Cross-domain insights**: patterns like "your study time is 18% higher than
-  last week" or "your highest spending day has been Saturday," generated from
-  real stored data (never hardcoded), and phrased as observed patterns, not
-  causation.
-- **Real ML**: a supervised model predicting weekly study-goal achievement and
-  an unsupervised model clustering days into interpretable behavior types —
-  both trained on-demand via an explicit "Train Models" button, never silently
-  retrained on every page load.
-- **CSV export** for Study, Health, Finance, and combined data.
+- **Secure Multi-User Authentication**: Production-grade authentication system powered by `bcrypt` password hashing (work factor 12), user data isolation (`user_id` context on all CRUD calls), and account management.
+- **Production UI/UX**: Neutral-first dark design system with an Inter font hierarchy, responsive grid alignment, and persistent sidebar navigation shell.
+- **Zero-Flicker Live Timer**: A study timer built using Streamlit native `@st.fragment(run_every="1s")` that updates live elapsed seconds without repainting the page or flashing UI elements.
+- **Onboarding choice**: Start Fresh (empty personal database) or Explore Demo Data (resettable sample data) — no fake data silently injected into a real account.
+- **Automatic health targets**: BMR (Mifflin-St Jeor), TDEE, calorie target, protein target, and BMI calculated from your profile. Precise weight input validation (20.0–300.0 kg, 0.1 step).
+- **Fast daily logging**: Quick-add food (with Recent Foods shortcut), one-tap water logging, a real study session timer that auto-saves on finish, and quick expense entry.
+- **Edit/delete everywhere**: Every logged record (food, workout, weight, study session, task, expense) can be edited or deleted.
+- **Personal Consistency Score**: A user-configurable weighted average across Study, Health, and Finance. Weights are adjustable in Settings.
+- **Cross-domain insights**: Real SQL patterns ("your study time is 18% higher than last week") generated from stored data.
+- **Real ML**: Supervised Logistic Regression predicting weekly goal achievement and unsupervised KMeans clustering days into interpretable behavior types.
+- **CSV export**: Dedicated export engine for Study, Health, Finance, and combined datasets.
 
 ## Architecture
 

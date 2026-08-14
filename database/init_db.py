@@ -62,6 +62,12 @@ def migrate_columns():
         ("user_profiles", "score_weight_finance", "REAL DEFAULT 0.25"),
         ("user_profiles", "is_demo", "INTEGER DEFAULT 0"),
         ("user_profiles", "created_at", "TEXT"),
+        # Auth fields added for multi-user support
+        ("users", "display_name", "TEXT"),
+        ("users", "email", "TEXT"),
+        ("users", "password_hash", "TEXT"),
+        ("users", "is_active", "INTEGER DEFAULT 1"),
+        ("users", "updated_at", "TEXT"),
     ]
 
     conn = sqlite3.connect(DB_PATH)
@@ -71,6 +77,7 @@ def migrate_columns():
             cursor.execute(f"ALTER TABLE {table} ADD COLUMN {col} {col_type}")
         except sqlite3.OperationalError:
             pass
+    # Remove old UNIQUE constraint on username if it was blocking (safe to ignore if already gone)
     conn.commit()
     conn.close()
 
@@ -80,16 +87,41 @@ def ensure_tables():
     create_tables()
 
 
-def ensure_default_user(session, user_id: int = DEFAULT_USER_ID) -> User:
+def ensure_default_user(session, user_id: int = DEFAULT_USER_ID, display_name: str = None) -> User:
     """Creates the base User row if missing. Does NOT create a profile —
     onboarding (or demo seeding) is responsible for that."""
     existing = session.get(User, user_id)
     if existing:
         return existing
-    user = User(id=user_id, username=f"user_{user_id}")
+    user = User(
+        id=user_id,
+        username=f"user_{user_id}",
+        display_name=display_name or f"user_{user_id}",
+    )
     session.add(user)
     session.commit()
     return user
+
+
+def migrate_legacy_user_to_account(session, user_id: int, email: str, display_name: str, password_hash: str):
+    """
+    Claims the existing legacy user (DEFAULT_USER_ID) for a newly registered account.
+    Sets email, display_name, and password_hash on the existing user row.
+    Returns the updated User object.
+    Called once when the first real account is registered and chooses to claim legacy data.
+    """
+    user = session.get(User, user_id)
+    if not user:
+        user = User(id=user_id)
+        session.add(user)
+
+    user.email = email
+    user.display_name = display_name
+    user.password_hash = password_hash
+    user.is_active = True
+    session.commit()
+    return user
+
 
 
 def ensure_default_categories_and_subjects(session, user_id: int = DEFAULT_USER_ID):

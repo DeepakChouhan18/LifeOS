@@ -1,162 +1,261 @@
 """
 Streamlit UI for Insights: cross-domain analytics + Machine Learning.
 
-IMPORTANT: models are NOT retrained on every page load (see spec on ML
-training architecture). Training only happens when the user clicks
-"Train Models". Between training runs, this page reads the last stored
-result from st.session_state (within the session) and MLModelMetadata
-(across sessions/restarts), so re-opening Insights doesn't imply retraining.
+Models train on-demand. Technical metrics and internal model names are kept
+in an expander to focus the user experience on plain-language prediction outcomes
+and daily cluster patterns.
 """
 
 import streamlit as st
 import plotly.express as px
 import pandas as pd
+import numpy as np
 
 from database.connection import get_session
 from database import raw_queries as rq
 from ml import preprocessing, train as ml_train
-from ml.supervised_model import explain_coefficients
+from modules.settings import crud as settings_crud
+from ml.supervised_model import explain_coefficients, predict_next_week
 from ml.unsupervised_model import describe_clusters, label_clusters
 from ml.evaluate import summarize_supervised, summarize_clustering, summarize_metadata
 from utils import ui_components
-from config import DEFAULT_USER_ID
+from utils.charts import apply_chart_theme
 
 
-def render():
-    ui_components.page_header("🔍 Insights", "Cross-domain patterns and machine learning, trained on your own data.")
+
+def render(user_id: int):
+    ui_components.page_header("Insights", "Cross-domain patterns, correlations, and data-driven behavioral forecasts.")
 
     db = get_session()
     try:
         tab_cross, tab_ml = st.tabs(["🔗 Cross-Domain Patterns", "🤖 Machine Learning"])
 
         with tab_cross:
-            _render_cross_domain_tab(db)
+            _render_cross_domain_tab(db, user_id)
 
         with tab_ml:
-            _render_ml_tab(db)
+            _render_ml_tab(db, user_id)
     finally:
         db.close()
 
 
-def _render_cross_domain_tab(db):
-    st.subheader("Cross-Domain Relationships")
+def _render_cross_domain_tab(db, user_id: int):
+    ui_components.section_header("Cross-Domain Relationships", icon="🔗")
     st.caption(
-        "These show **observed patterns** in your own logged data — not causation. "
-        "A pattern here doesn't mean one thing caused the other."
+        "These charts show observed patterns in your logged history. "
+        "They represent correlations in your behavior, not causal relationships."
     )
 
-    cross_df = pd.DataFrame(rq.get_cross_study_workout(db, DEFAULT_USER_ID))
-    if not cross_df.empty and len(cross_df) >= 2:
-        st.markdown("##### Study Hours vs. Workout Frequency (by week)")
-        fig = px.scatter(
-            cross_df, x="study_hours", y="workout_count", size="workout_minutes",
-            color="week", title="Weekly study hours vs. workouts completed",
-            labels={"study_hours": "Study Hours", "workout_count": "Workouts"},
-        )
-        st.plotly_chart(fig, use_container_width=True, key="insights_cross_scatter")
+    cross_df = pd.DataFrame(rq.get_cross_study_workout(db, user_id))
+    col1, col2 = st.columns(2, gap="large")
+
+    with col1:
+        if not cross_df.empty and len(cross_df) >= 2:
+            fig = px.scatter(
+                cross_df, x="study_hours", y="workout_count", size="workout_minutes",
+                color="week", title="Study Hours vs. Workouts",
+                labels={"study_hours": "Study Hours", "workout_count": "Workouts Completed", "week": "Week"},
+            )
+            fig = apply_chart_theme(fig, "Study Hours vs. Workouts")
+            st.plotly_chart(fig, use_container_width=True, key="insights_cross_scatter")
+        else:
+            ui_components.empty_state(
+                "Log at least 2 weeks of study and workouts to see this pattern.",
+                icon="🔗"
+            )
+
+    with col2:
+        weekday_df = pd.DataFrame(rq.get_spending_by_weekday(db, user_id))
+        if not weekday_df.empty:
+            fig = px.bar(
+                weekday_df, x="weekday_name", y="total_spent",
+                title="Spending by Weekday",
+                labels={"weekday_name": "Day of Week", "total_spent": "Total Spent (₹)"},
+                color="total_spent",
+                color_continuous_scale="Purples"
+            )
+            fig.update_layout(showlegend=False, coloraxis_showscale=False)
+            fig = apply_chart_theme(fig, "Spending by Weekday")
+            st.plotly_chart(fig, use_container_width=True, key="insights_weekday_spend")
+        else:
+            ui_components.empty_state("No expense logs yet.", icon="💰")
+
+
+# Helper to get current week's features for next week prediction
+def _get_current_week_features(db, user_id):
+    profile = settings_crud.get_user_profile(db, user_id)
+    weekly_goal_minutes = (profile.daily_study_goal_minutes * 7) if profile else None
+    
+    daily = preprocessing.build_daily_features_df(db, user_id)
+    if daily.empty:
+        return None
+    daily["week"] = daily["log_date"].dt.strftime("%Y-%W")
+    weekly = daily.groupby("week").agg(
+        study_minutes=("study_minutes", "sum"),
+        avg_calories=("calories", "mean"),
+        workout_minutes=("workout_minutes", "sum"),
+        avg_sleep_hours=("sleep_hours", "mean"),
+        total_expense=("expense_amount", "sum"),
+    ).reset_index()
+    
+    # task completion
+    from sqlalchemy import text
+    task_df = pd.read_sql(
+        text("SELECT due_date AS log_date, is_completed FROM study_tasks WHERE user_id = :uid AND due_date IS NOT NULL"),
+        db.bind, params={"uid": user_id}
+    )
+    if not task_df.empty:
+        task_df["log_date"] = pd.to_datetime(task_df["log_date"])
+        task_df["week"] = task_df["log_date"].dt.strftime("%Y-%W")
+        completion_by_week = task_df.groupby("week")["is_completed"].mean().reset_index()
+        completion_by_week.columns = ["week", "task_completion_rate"]
+        weekly = weekly.merge(completion_by_week, on="week", how="left")
     else:
-        ui_components.empty_state("Log at least 2 weeks of study and workout data to see this pattern.")
+        weekly["task_completion_rate"] = 0
+    weekly["task_completion_rate"] = weekly["task_completion_rate"].fillna(0)
+    
+    if weekly.empty:
+        return None
+    
+    last_row = weekly.iloc[-1]
+    return {
+        "study_minutes": float(last_row["study_minutes"]),
+        "avg_calories": float(last_row["avg_calories"]),
+        "workout_minutes": float(last_row["workout_minutes"]),
+        "avg_sleep_hours": float(last_row["avg_sleep_hours"]),
+        "total_expense": float(last_row["total_expense"]),
+        "task_completion_rate": float(last_row["task_completion_rate"]),
+    }
 
-    st.divider()
-    st.markdown("##### Spending by Weekday")
-    weekday_df = pd.DataFrame(rq.get_spending_by_weekday(db, DEFAULT_USER_ID))
-    if not weekday_df.empty:
-        fig = px.bar(weekday_df, x="weekday_name", y="total_spent", title="Total spend by day of week")
-        st.plotly_chart(fig, use_container_width=True, key="insights_weekday_spend")
-    else:
-        ui_components.empty_state("No expense data yet.")
 
-
-def _render_ml_tab(db):
-    st.subheader("Machine Learning")
+def _render_ml_tab(db, user_id: int):
+    ui_components.section_header("Machine Learning Insights")
     st.caption(
-        "Models train on-demand, not automatically — click **Train Models** below "
-        "whenever you want fresh predictions from your latest data."
+        "Models train on-demand using your own logged historical data. "
+        "Click Train Models below to rebuild predictions using your latest history."
     )
 
-    if st.button("🔄 Train Models", type="primary"):
-        with st.spinner("Building features and training models..."):
-            result = ml_train.run_training(db, DEFAULT_USER_ID)
+    # Clean action layout
+    c_btn, c_info = st.columns([1, 3])
+    with c_btn:
+        train_triggered = st.button("🔄 Train Models", type="primary", use_container_width=True)
+    with c_info:
+        supervised_meta = ml_train.get_latest_metadata(db, user_id, "supervised")
+        if supervised_meta:
+            st.markdown(f'<p style="font-size:0.8rem; color:#64748b; margin-top:0.5rem;">{summarize_metadata(supervised_meta)}</p>', unsafe_allow_html=True)
+
+    if train_triggered:
+        with st.spinner("Processing data and training models..."):
+            result = ml_train.run_training(db, user_id)
             st.session_state["ml_result"] = result
-        st.success("Training complete.")
+        st.success("✅ Models trained and saved successfully!")
+        st.rerun()
 
     result = st.session_state.get("ml_result")
 
-    supervised_meta = ml_train.get_latest_metadata(db, DEFAULT_USER_ID, "supervised")
-    cluster_meta = ml_train.get_latest_metadata(db, DEFAULT_USER_ID, "unsupervised")
-
-    st.divider()
-    st.markdown("### 📈 Supervised: Weekly Study Goal Prediction")
-    st.caption(
-        "Logistic Regression predicts whether you'll hit your weekly study goal, "
-        "using only the PREVIOUS week's study/health/finance/task stats — never "
-        "the current week's own data (would be circular). Evaluated with a "
-        "**chronological** train/test split (earliest weeks train, most recent weeks test) "
-        "— never a random shuffle, since this is a forecasting problem."
-    )
-
-    if supervised_meta:
-        st.caption(summarize_metadata(supervised_meta))
+    # -----------------------------------------------------------------------
+    # Supervised: Weekly Study Goal Prediction
+    # -----------------------------------------------------------------------
+    st.markdown("<br>", unsafe_allow_html=True)
+    ui_components.section_header("Study Goal Prediction", subtitle="Forecasts whether you will meet your study goal next week based on your activity this week.", icon="📈")
 
     if result and result["supervised"]["model"] is not None:
         bundle = result["supervised"]
-        st.info(summarize_supervised(bundle))
+        
+        # Make next week prediction using current week's features
+        current_features = _get_current_week_features(db, user_id)
+        if current_features:
+            pred_res = predict_next_week(bundle, current_features)
+            if pred_res["prediction"] is not None:
+                pred_label = "Likely to hit weekly goal" if pred_res["prediction"] == 1 else "Likely to miss weekly goal"
+                banner_variant = "success" if pred_res["prediction"] == 1 else "warning"
+                prob_pct = pred_res["probability"] * 100 if pred_res["prediction"] == 1 else (1.0 - pred_res["probability"]) * 100
+                ui_components.info_banner(
+                    f"🔮 **Prediction for next week:** {pred_label} (Confidence: **{prob_pct:.0f}%**)<br>"
+                    f"<span style='font-size:0.8rem; opacity:0.85;'>Estimated from your study, tasks, sleep, and fitness levels logged so far this week.</span>",
+                    banner_type=banner_variant
+                )
+        else:
+            ui_components.info_banner("Insufficient logged weeks to generate upcoming week prediction.")
 
-        if bundle["status"] == "evaluated":
-            c1, c2 = st.columns(2)
-            with c1:
-                st.write("**Confusion Matrix** (rows=actual, cols=predicted)")
-                cm_df = pd.DataFrame(bundle["confusion_matrix"],
-                                      index=["Actual: Missed", "Actual: Hit"],
-                                      columns=["Pred: Missed", "Pred: Hit"])
-                st.dataframe(cm_df, use_container_width=True)
-            with c2:
-                st.write("**Class Distribution**")
-                st.write(f"Train: {bundle['train_class_distribution']}")
-                st.write(f"Test: {bundle['test_class_distribution']}")
+        # Collapsible technical section
+        with st.expander("🛠️ Model Details & Evaluation Metrics"):
+            st.markdown(f"**Performance Summary:** {summarize_supervised(bundle)}")
+            
+            if bundle["status"] == "evaluated":
+                c1, c2 = st.columns(2)
+                with c1:
+                    st.write("**Confusion Matrix** (actual vs. predicted)")
+                    cm_df = pd.DataFrame(bundle["confusion_matrix"],
+                                          index=["Actual: Missed", "Actual: Hit"],
+                                          columns=["Pred: Missed", "Pred: Hit"])
+                    st.dataframe(cm_df, use_container_width=True)
+                with c2:
+                    st.write("**Data Distribution**")
+                    st.write(f"Train set: {bundle['train_class_distribution']} weeks")
+                    st.write(f"Test set: {bundle['test_class_distribution']} weeks")
 
-        coef_df = explain_coefficients(bundle)
-        if not coef_df.empty:
-            st.write("**Important predictive features** (not causal relationships):")
-            fig = px.bar(coef_df, x="feature", y="coefficient",
-                         title="Feature coefficients (magnitude = influence on prediction)",
-                         color="coefficient", color_continuous_scale="RdBu")
-            st.plotly_chart(fig, use_container_width=True, key="insights_coef_bar")
-    elif not result:
-        ui_components.empty_state("Click 'Train Models' above to generate a prediction.")
+            coef_df = explain_coefficients(bundle)
+            if not coef_df.empty:
+                st.markdown("<br>**Predictive Weights** (magnitude implies relevance, direction implies positive/negative correlation)", unsafe_allow_html=True)
+                # Pretty mapping of feature names for non-technical users
+                friendly_names = {
+                    "prev_study_minutes": "Study Time",
+                    "prev_avg_calories": "Calorie Intake",
+                    "prev_workout_minutes": "Workout Duration",
+                    "prev_avg_sleep_hours": "Sleep Duration",
+                    "prev_total_expense": "Spending Amount",
+                    "prev_task_completion_rate": "Task Completion Rate"
+                }
+                coef_df["feature_name"] = coef_df["feature"].map(friendly_names)
+                fig = px.bar(coef_df, x="feature_name", y="coefficient",
+                             title="Predictive Weights",
+                             labels={"feature_name": "Activity Category", "coefficient": "Relevance Weight"},
+                             color="coefficient", color_continuous_scale="RdBu")
+                fig.update_layout(showlegend=False, coloraxis_showscale=False)
+                fig = apply_chart_theme(fig, "Predictive Weights")
+                st.plotly_chart(fig, use_container_width=True, key="insights_coef_bar")
     else:
-        st.info(summarize_supervised(result["supervised"]))
+        ui_components.empty_state("Click 'Train Models' to generate predictions.", icon="🔮")
 
-    st.divider()
-    st.markdown("### 🧩 Unsupervised: Day-Type Clustering")
-    st.caption(
-        "KMeans groups your logged days into behavior types using study, calories, "
-        "workout, sleep, and spend together. Cluster labels compare each cluster "
-        "against YOUR OWN historical average — not fixed universal thresholds."
-    )
-
-    if cluster_meta:
-        st.caption(summarize_metadata(cluster_meta))
+    # -----------------------------------------------------------------------
+    # Unsupervised: Day-Type Clustering
+    # -----------------------------------------------------------------------
+    st.markdown("<br>", unsafe_allow_html=True)
+    ui_components.section_header("Behavioral Clusters", subtitle="Groups your historical days into distinct patterns based on combined activities.", icon="🧩")
 
     if result and result["cluster"]["model"] is not None:
         bundle = result["cluster"]
-        st.info(summarize_clustering(bundle))
-
         labels = label_clusters(bundle)
-        for c in labels:
-            with st.container():
-                st.markdown(f"**🔹 {c['label']}** — {c['day_count']} days")
-                char_str = " · ".join(f"{k.replace('_', ' ').title()}: {v}" for k, v in c["characteristics"].items())
-                st.caption(char_str)
 
-        labeled_df = bundle["labeled_df"]
-        fig = px.scatter(
-            labeled_df, x="study_minutes", y="calories", color=labeled_df["cluster"].astype(str),
-            title="Days by cluster: study minutes vs. calories",
-            labels={"color": "Cluster"}, hover_data=["workout_minutes", "expense_amount", "sleep_hours"],
-        )
-        st.plotly_chart(fig, use_container_width=True, key="insights_cluster_scatter")
-    elif not result:
-        ui_components.empty_state("Click 'Train Models' above to see your day-type clusters.")
+        st.markdown("**Your Day Types:**")
+        cols = st.columns(min(3, len(labels)))
+        for idx, c in enumerate(labels):
+            col = cols[idx % len(cols)]
+            with col:
+                char_list = [f"• {k.replace('_', ' ').title()}: {v}" for k, v in c["characteristics"].items()]
+                char_str = "<br>".join(char_list)
+                st.markdown(
+                    f'<div style="padding:1rem; background:#1e293b; border-radius:12px; border:1px solid #334155; height:100%;">'
+                    f'  <div style="font-weight:700; color:#818cf8; font-size:0.95rem; margin-bottom:0.4rem;">🔹 {c["label"]}</div>'
+                    f'  <div style="font-size:0.8rem; color:#94a3b8; font-weight:600; margin-bottom:0.6rem;">{c["day_count"]} day(s) matched</div>'
+                    f'  <div style="font-size:0.8rem; color:#e2e8f0; line-height:1.4;">{char_str}</div>'
+                    f'</div>',
+                    unsafe_allow_html=True
+                )
+
+        st.markdown("<br>", unsafe_allow_html=True)
+        with st.expander("🛠️ Clustering Diagnostics & Scatter Plot"):
+            st.markdown(f"**Diagnostic Summary:** {summarize_clustering(bundle)}")
+            
+            labeled_df = bundle["labeled_df"]
+            fig = px.scatter(
+                labeled_df, x="study_minutes", y="calories", color=labeled_df["cluster"].astype(str),
+                title="Study Minutes vs. Calories by Cluster",
+                labels={"color": "Day Type Cluster", "study_minutes": "Study Minutes", "calories": "Calories (kcal)"},
+                hover_data=["workout_minutes", "expense_amount", "sleep_hours"],
+            )
+            fig = apply_chart_theme(fig, "Study Minutes vs. Calories by Cluster")
+            st.plotly_chart(fig, use_container_width=True, key="insights_cluster_scatter")
     else:
-        st.info(summarize_clustering(result["cluster"]))
+        ui_components.empty_state("Click 'Train Models' to discover your day patterns.", icon="🧩")

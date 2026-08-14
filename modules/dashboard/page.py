@@ -1,103 +1,182 @@
 """
-Streamlit UI for the unified LifeOS Overview Dashboard.
+Streamlit UI for the unified LifeOS Dashboard.
 
-Combines high-level daily summaries across Study, Health, and Finance:
-- Personalized greeting with user's name
-- Today's high-level summary cards (Study, Health, Finance, Streak)
-- Smart, data-driven insights powered by raw SQL analytics
-- Overall Productivity Score & per-module score breakdown
+Design philosophy:
+  - Answers "What matters to me today?" — not "here are all my database records"
+  - Greeting + date → Today summary cards → Priorities → Insights → Consistency Score
+  - Progressive disclosure: deep analytics are in individual module pages
 """
 
 import streamlit as st
-import plotly.express as px
-import pandas as pd
+from datetime import date
 
 from database.connection import get_session
 from modules.dashboard import aggregator
 from modules.settings import crud as settings_crud
-from utils import ui_components, date_helpers
-from config import DEFAULT_USER_ID
+from utils import ui_components, date_helpers, auth as auth_utils
 
 
-def render():
+def render(user_id: int):
     db = get_session()
     try:
-        profile = settings_crud.get_user_profile(db, DEFAULT_USER_ID)
-        user_name = profile.name if profile else "Friend"
+        profile = settings_crud.get_user_profile(db, user_id)
+        user_name = profile.name if profile else auth_utils.get_current_display_name()
 
-        greet_text = date_helpers.greeting()
-        ui_components.page_header(f"{greet_text}, {user_name} 👋", "Here is your personal daily life summary across Study, Health, and Finance.")
+        greet_text, today_str = date_helpers.greeting(), date_helpers.today_label()
 
-        summary = aggregator.get_combined_summary(db, DEFAULT_USER_ID)
+        # ---- Hero greeting ----
+        st.markdown(
+            f"""
+            <div style="margin-bottom:1.75rem; padding-bottom:1.25rem; border-bottom:1px solid #1a2540;">
+                <div style="font-size:1.65rem; font-weight:700; color:#f8fafc; letter-spacing:-0.025em; margin-bottom:0.2rem;">
+                    {greet_text}, {user_name}.
+                </div>
+                <div style="font-size:0.875rem; color:#475569;">
+                    {today_str} — Here's your progress today.
+                </div>
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
 
-        _render_today_overview(summary)
+        summary = aggregator.get_combined_summary(db, user_id)
 
-        st.divider()
+        # ---- TODAY summary cards ----
+        _render_today_cards(summary)
 
-        _render_priorities(summary)
+        st.markdown("<div style='height:1.25rem;'></div>", unsafe_allow_html=True)
 
-        st.divider()
+        # ---- Two-column: Priorities | Insights ----
+        col_left, col_right = st.columns([1, 1], gap="large")
+        with col_left:
+            _render_priorities(summary)
+        with col_right:
+            _render_insights(summary)
 
-        _render_smart_insights(summary)
+        st.markdown("<hr style='border-color:#1a2540; margin:1.75rem 0;'>", unsafe_allow_html=True)
 
-        st.divider()
-
+        # ---- Consistency Score ----
         _render_consistency_score(summary)
 
     finally:
         db.close()
 
 
-def _render_priorities(summary):
-    st.subheader("Today's Priorities")
-    priorities = summary.get("priorities", [])
-    if not priorities:
-        ui_components.empty_state("No priorities yet — add tasks or log today's health data.")
-        return
-    for p in priorities:
-        st.checkbox(p["label"], value=p["done"], disabled=True, key=f"priority_{p['label']}")
+# ---------------------------------------------------------------------------
+# Sub-sections
+# ---------------------------------------------------------------------------
 
+def _render_today_cards(summary):
+    ui_components.section_header("TODAY", icon="")
 
-def _render_today_overview(summary):
-    st.subheader("Today at a Glance")
-
-    study_sum = summary["study"]
-    health_sum = summary["health"]
-    finance_sum = summary["finance"]
+    study = summary["study"]
+    health = summary["health"]
+    finance = summary["finance"]
 
     c1, c2, c3, c4 = st.columns(4)
 
     with c1:
-        st.markdown("**📚 STUDY**")
-        hours_str = f"{study_sum.get('today_hours', 0):.1f} / {study_sum.get('daily_goal_hours', 5):.1f} hours"
-        pct_str = f"{study_sum.get('today_goal_pct', 0):.0f}% complete"
-        st.metric("Study Today", hours_str, pct_str)
+        today_h = study.get("today_hours", 0)
+        goal_h = study.get("daily_goal_hours", 5)
+        pct = study.get("today_goal_pct", 0)
+        delta = f"{pct:.0f}% of daily goal"
+        ui_components.metric_card(
+            label="Study",
+            value=f"{today_h:.1f} h",
+            subtitle=f"Goal {goal_h:.0f} h",
+            delta=delta,
+            delta_type="up" if pct >= 80 else ("neutral" if pct >= 30 else "down"),
+            accent_color="#6366f1",
+        )
 
     with c2:
-        st.markdown("**💪 HEALTH**")
-        cal_str = f"{health_sum.get('calories_today', 0):.0f} / {health_sum.get('calorie_target', 2200):.0f} kcal"
-        prot_str = f"{health_sum.get('protein_today', 0):.0f} / {health_sum.get('protein_target_g', 130):.0f} g protein"
-        st.metric("Calories Today", cal_str, prot_str)
+        cal_today = health.get("calories_today", 0)
+        cal_target = health.get("calorie_target", 2200)
+        weight = health.get("latest_weight")
+        weight_str = f"{weight:.1f} kg" if weight else "—"
+        cal_pct = (cal_today / cal_target * 100) if cal_target else 0
+        ui_components.metric_card(
+            label="Calories",
+            value=f"{cal_today:.0f} kcal",
+            subtitle=f"Target {cal_target:.0f} · Weight {weight_str}",
+            delta=f"{cal_pct:.0f}% of target",
+            delta_type="neutral" if 80 <= cal_pct <= 110 else ("up" if cal_pct <= 100 else "down"),
+            accent_color="#10b981",
+        )
 
     with c3:
-        st.markdown("**💰 FINANCE**")
-        spend_str = f"₹{finance_sum.get('today_spent', 0):.0f} spent today"
-        rem_str = f"₹{finance_sum.get('daily_budget_remaining', 0):.0f} daily budget left"
-        st.metric("Expenses Today", spend_str, rem_str)
+        spent = finance.get("today_spent", 0)
+        daily_rem = finance.get("daily_budget_remaining", 0)
+        ui_components.metric_card(
+            label="Spent Today",
+            value=f"₹{spent:.0f}",
+            subtitle=f"₹{daily_rem:.0f} daily budget left",
+            accent_color="#f59e0b",
+        )
 
     with c4:
-        st.markdown("**🔥 STREAK**")
-        streak_str = f"{study_sum.get('current_streak', 0)} days"
-        long_str = f"Longest: {study_sum.get('longest_streak', 0)} days"
-        st.metric("Current Streak", streak_str, long_str)
+        streak = study.get("current_streak", 0)
+        longest = study.get("longest_streak", 0)
+        ui_components.metric_card(
+            label="Study Streak",
+            value=f"{streak} days",
+            subtitle=f"Longest {longest} days",
+            delta="🔥 On fire!" if streak >= 7 else "",
+            delta_type="up" if streak >= 7 else "neutral",
+            accent_color="#a855f7",
+        )
 
 
-def _render_smart_insights(summary):
-    st.subheader("💡 Smart Data Insights")
+def _render_priorities(summary):
+    ui_components.section_header("TODAY'S FOCUS")
+    priorities = summary.get("priorities", [])
+
+    if not priorities:
+        ui_components.empty_state(
+            "No priorities yet",
+            icon="✓",
+            hint="Add high-priority tasks in Study to populate this list.",
+        )
+        return
+
+    for p in priorities:
+        done = p.get("done", False)
+        label = p.get("label", "")
+        task_class = "los-task-label los-task-done" if done else "los-task-label"
+        icon = "✓" if done else "○"
+        icon_color = "#22c55e" if done else "#475569"
+        st.markdown(
+            f'<div class="los-task-row">'
+            f'<span style="color:{icon_color}; font-size:0.9rem; flex-shrink:0;">{icon}</span>'
+            f'<span class="{task_class}">{label}</span>'
+            f'</div>',
+            unsafe_allow_html=True,
+        )
+
+    st.markdown("<div style='height:0.25rem;'></div>", unsafe_allow_html=True)
+
+    # Quick action buttons
+    col_a, col_b = st.columns(2)
+    with col_a:
+        if st.button("+ Add Task", key="dash_add_task", use_container_width=True):
+            st.session_state.page = "Study"
+            st.rerun()
+    with col_b:
+        if st.button("Study Session →", key="dash_study", use_container_width=True):
+            st.session_state.page = "Study"
+            st.rerun()
+
+
+def _render_insights(summary):
+    ui_components.section_header("INSIGHTS")
     insights = summary.get("insights", [])
 
     if not insights:
-        ui_components.empty_state("Keep logging data to unlock automated insights.")
+        ui_components.empty_state(
+            "No insights yet",
+            icon="◎",
+            hint="Keep logging data for a few days to unlock personalized insights.",
+        )
         return
 
     for insight in insights:
@@ -105,34 +184,20 @@ def _render_smart_insights(summary):
 
 
 def _render_consistency_score(summary):
-    st.subheader("📈 Personal Consistency Score")
+    ui_components.section_header(
+        "PERSONAL CONSISTENCY SCORE",
+        subtitle="A weighted average you control — not an objective life score. Adjust weights in Settings.",
+    )
 
     scores = summary["scores"]
     weights = summary["weights"]
 
-    col1, col2 = st.columns([1, 2])
-
-    with col1:
-        st.metric("Consistency Score", f"{scores['overall']:.1f} / 100")
-        st.caption(
-            f"A simple weighted average YOU control — not an objective measure "
-            f"of your life. Current weights: Study {weights['study']*100:.0f}% · "
-            f"Health {weights['health']*100:.0f}% · Finance {weights['finance']*100:.0f}%. "
-            "Adjust these in Settings."
-        )
-
-    with col2:
-        df = pd.DataFrame({
-            "Module": ["Study", "Health", "Finance"],
-            "Score": [scores["study"], scores["health"], scores["finance"]],
-        })
-        fig = px.bar(
-            df, x="Module", y="Score", range_y=[0, 100], color="Module",
-            title="Module Scores (0-100)",
-            color_discrete_sequence=["#38BDF8", "#818CF8", "#10B981"]
-        )
-        fig.update_layout(
-            template="plotly_dark", paper_bgcolor="rgba(0,0,0,0)",
-            plot_bgcolor="rgba(0,0,0,0)", showlegend=False, height=250
-        )
-        st.plotly_chart(fig, use_container_width=True, key="dash_module_scores_bar")
+    ui_components.consistency_score_display(
+        overall=scores["overall"],
+        study=scores["study"],
+        health=scores["health"],
+        finance=scores["finance"],
+        study_w=weights["study"],
+        health_w=weights["health"],
+        finance_w=weights["finance"],
+    )

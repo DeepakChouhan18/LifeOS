@@ -77,3 +77,9 @@ def days_in_current_month() -> int:
 def days_elapsed_in_month() -> int:
     """Days elapsed so far in the current month (including today)."""
     return date.today().day
+
+
+def today_label() -> str:
+    """Returns a human-friendly today string, e.g. 'Thu, Aug 14'."""
+    return date.today().strftime("%a, %b %d")
+

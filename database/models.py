@@ -30,10 +30,19 @@ class User(Base):
     __tablename__ = "users"
 
     id = Column(Integer, primary_key=True)
-    username = Column(String, unique=True, nullable=False)
+    username = Column(String, nullable=True)        # legacy field, kept for compat
+    display_name = Column(String, nullable=True)    # shown in UI
+    email = Column(String, nullable=True)           # unique login identifier
+    password_hash = Column(String, nullable=True)   # bcrypt hash; NULL = legacy user
+    is_active = Column(Boolean, default=True)
     created_at = Column(DateTime, default=_utcnow)
+    updated_at = Column(DateTime, default=_utcnow, onupdate=_utcnow)
 
     profile = relationship("UserProfile", back_populates="user", uselist=False)
+
+    __table_args__ = (
+        UniqueConstraint("email", name="uq_user_email"),
+    )
 
 
 class UserProfile(Base):

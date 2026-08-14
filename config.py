@@ -2,18 +2,49 @@
 Central config for LifeOS.
 Keep DB paths, constants, and settings here so nothing is hardcoded
 across modules.
+
+DATABASE_URL priority:
+  1. DATABASE_URL environment variable (set this for PostgreSQL in production)
+  2. STREAMLIT secrets (st.secrets) — used on Streamlit Cloud
+  3. Fallback: SQLite file at data/lifeos.db (local development default)
 """
 
 import os
+
+# Try to load .env for local development (no-op if file absent or dotenv not installed)
+try:
+    from dotenv import load_dotenv
+    load_dotenv()
+except ImportError:
+    pass
+
 from utils.health_calc import ACTIVITY_LABELS  # noqa: F401 (re-exported for convenience)
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 DATA_DIR = os.path.join(BASE_DIR, "data")
 DB_PATH = os.path.join(DATA_DIR, "lifeos.db")
-DATABASE_URL = f"sqlite:///{DB_PATH}"
 
-# Default single-user id until multi-user auth is added.
+# DATABASE_URL: prefer env var (for PostgreSQL in production), else local SQLite
+_env_db_url = os.environ.get("DATABASE_URL", "")
+if _env_db_url:
+    # Heroku / Railway / Render provide "postgres://..." — SQLAlchemy needs "postgresql://..."
+    DATABASE_URL = _env_db_url.replace("postgres://", "postgresql://", 1)
+else:
+    DATABASE_URL = f"sqlite:///{DB_PATH}"
+
+# DEFAULT_USER_ID: the legacy single-user id for backward compatibility.
+# This user is created automatically on first launch and can be claimed
+# by the first registered account (data migration path).
 DEFAULT_USER_ID = 1
+
+# DEMO_USER_ID: dedicated demo data user (separate from DEFAULT_USER_ID in
+# multi-user mode so real users don't inherit demo data automatically).
+# When running single-user (legacy) mode, DEMO_USER_ID == DEFAULT_USER_ID.
+DEMO_USER_ID = DEFAULT_USER_ID
+
+# Secret key for any session-level signing (not currently used for JWT,
+# but good practice to have available as an env-configurable constant).
+SECRET_KEY = os.environ.get("LIFEOS_SECRET_KEY", "dev-secret-change-in-production")
 
 # Default categories / subjects offered during onboarding & first setup
 DEFAULT_EXPENSE_CATEGORIES = [

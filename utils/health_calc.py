@@ -30,6 +30,7 @@ ACTIVITY_MULTIPLIERS = {
 }
 
 ACTIVITY_LABELS = {
+    "select": "Select Activity Level",
     "sedentary": "Sedentary (little or no exercise)",
     "light": "Lightly Active (1-3 days/week)",
     "moderate": "Moderately Active (3-5 days/week)",
@@ -70,7 +71,10 @@ def calculate_tdee(bmr: float, activity_level: str) -> float:
 
     Returns TDEE in kcal/day.
     """
-    multiplier = ACTIVITY_MULTIPLIERS.get(activity_level.lower())
+    level = (activity_level or "").lower()
+    if level == "select":
+        level = "moderate"
+    multiplier = ACTIVITY_MULTIPLIERS.get(level)
     if multiplier is None:
         raise ValueError(
             f"Unknown activity level '{activity_level}'. "

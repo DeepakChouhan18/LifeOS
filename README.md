@@ -67,8 +67,9 @@ lifeos/
 │   ├── charts.py                   # Plotly chart builders
 │   ├── export.py                    # CSV export
 │   ├── date_helpers.py               # Date/week utilities
-│   └── ui_components.py               # Shared CSS, empty states, progress widgets
-└── tests/                        # 75 tests across all modules
+│   ├── auth.py                       # Bcrypt password hashing & session authentication
+│   └── ui_components.py               # Shared CSS, dark design system, progress widgets
+└── tests/                        # 97 tests across all modules (auth, isolation, analytics, ML)
 ```
 
 ## Tech Stack
@@ -220,8 +221,8 @@ python ml/train.py
 pytest
 ```
 
-75 tests covering: BMR/TDEE/BMI/calorie-target calculations (including the
-no-universal-1200-floor requirement), study streaks and completion, finance
+97 tests covering: secure bcrypt authentication & user data isolation, BMR/TDEE/BMI/calorie-target
+calculations (including the no-universal-1200-floor requirement), study streaks and completion, finance
 budgets and category totals, raw SQL (JOINs, CTEs, `HAVING`, calendar-based
 rolling windows, missing-date behavior), ML preprocessing (no NaNs, no target
 leakage), ML models (chronological splitting, insufficient-data handling,
@@ -250,9 +251,7 @@ deployment starts empty (or with demo data, by the visitor's own choice).
 
 ## Limitations
 
-- **Single-user**: no authentication. `DEFAULT_USER_ID` is used throughout;
-  the schema is `user_id`-keyed everywhere so multi-user support wouldn't
-  require a schema rewrite, but auth itself isn't implemented.
+- **Concurrency / SQLite storage**: Uses SQLite as the embedded database engine; while every table is indexed on `user_id` for strict multi-user data isolation, high write-concurrency multi-instance setups should migrate to PostgreSQL.
 - **ML accuracy on small datasets**: with only a few weeks of real history,
   the supervised model will usually report "not enough data" rather than a
   metric — this is intentional (see Machine Learning section above), but it
@@ -274,4 +273,4 @@ deployment starts empty (or with demo data, by the visitor's own choice).
   endpoint comparison.
 - A study session heatmap/calendar view.
 - Category-level budget rollover between months.
-- Optional multi-user auth if this stops being a single-person tool.
+- OAuth2 / Social SSO login options (e.g. Google, GitHub).

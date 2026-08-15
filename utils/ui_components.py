@@ -265,18 +265,31 @@ def inject_custom_css():
     }
 
     /* ====================================================================
-       INPUTS / SELECTS
+       INPUTS / SELECTS / TEXTAREAS
     ==================================================================== */
 
     div[data-baseweb="input"],
     .stTextArea > div > div > textarea,
-    .stSelectbox > div > div > div {
+    div[data-baseweb="select"] > div {
         background: #111927 !important;
         border: 1px solid #334155 !important;
         border-radius: 8px !important;
         color: #e2e8f0 !important;
         font-size: 0.875rem !important;
     }
+
+    /* Remove nested borders inside BaseWeb selectbox control */
+    div[data-baseweb="select"] div {
+        border: none !important;
+        box-shadow: none !important;
+        background: transparent !important;
+    }
+
+    div[data-baseweb="select"] svg {
+        fill: #94a3b8 !important;
+        color: #94a3b8 !important;
+    }
+
     div[data-baseweb="input"] > input {
         background: transparent !important;
         border: none !important;
@@ -284,11 +297,38 @@ def inject_custom_css():
         font-size: 0.875rem !important;
         box-shadow: none !important;
     }
+
     div[data-baseweb="input"]:focus-within,
-    .stTextArea > div > div > textarea:focus {
+    .stTextArea > div > div > textarea:focus,
+    div[data-baseweb="select"] > div:focus-within {
         border-color: #6366f1 !important;
         box-shadow: 0 0 0 2px rgba(99,102,241,0.15) !important;
     }
+
+    /* BaseWeb Select Popover Menu */
+    div[data-baseweb="popover"],
+    div[data-baseweb="menu"],
+    ul[role="listbox"] {
+        background-color: #111927 !important;
+        border: 1px solid #334155 !important;
+        border-radius: 8px !important;
+        box-shadow: 0 8px 24px rgba(0,0,0,0.4) !important;
+    }
+
+    li[role="option"] {
+        background-color: #111927 !important;
+        color: #cbd5e1 !important;
+        font-size: 0.875rem !important;
+        padding: 0.5rem 0.75rem !important;
+        border-radius: 4px !important;
+    }
+
+    li[role="option"]:hover,
+    li[role="option"][aria-selected="true"] {
+        background-color: #1e293b !important;
+        color: #f8fafc !important;
+    }
+
     div[data-baseweb="input"] button {
         background: transparent !important;
         border: none !important;
@@ -774,11 +814,11 @@ def status_badge(text: str, variant: str = "neutral") -> str:
 
 def info_banner(text: str, banner_type: str = "info"):
     """Renders a styled horizontal banner. banner_type: info | success | warning | danger."""
-    icons = {"info": "ℹ️", "success": "✓", "warning": "⚠", "danger": "✕"}
-    icon = icons.get(banner_type, "")
+    labels = {"info": "INFO", "success": "SUCCESS", "warning": "WARNING", "danger": "ERROR"}
+    lbl = labels.get(banner_type, "INFO")
     st.markdown(
         f'<div class="los-banner los-banner-{banner_type}">'
-        f'<span style="flex-shrink:0;">{icon}</span>'
+        f'<span style="font-size:0.68rem; font-weight:700; letter-spacing:0.06em; flex-shrink:0; padding:0.1rem 0.35rem; border-radius:4px; background:rgba(255,255,255,0.08);">{lbl}</span>'
         f'<span>{text}</span>'
         f'</div>',
         unsafe_allow_html=True,
@@ -789,12 +829,11 @@ def info_banner(text: str, banner_type: str = "info"):
 # Empty state
 # ---------------------------------------------------------------------------
 
-def empty_state(message: str, icon: str = "📭", hint: str = ""):
-    """Shows a professional empty state with icon, message, and optional hint."""
+def empty_state(message: str, icon: str = "", hint: str = ""):
+    """Shows a professional empty state with message and optional hint."""
     hint_html = f'<p class="los-empty-hint">{hint}</p>' if hint else ""
     st.markdown(
         f'<div class="los-empty">'
-        f'<span class="los-empty-icon">{icon}</span>'
         f'<p class="los-empty-title">{message}</p>'
         f'{hint_html}'
         f'</div>',
@@ -808,8 +847,9 @@ def empty_state(message: str, icon: str = "📭", hint: str = ""):
 
 def insight_card(text: str, icon: str = "→"):
     """Renders a styled insight card with an emerald left border."""
+    prefix = f"{icon} " if icon else ""
     st.markdown(
-        f'<div class="los-insight">{icon} {text}</div>',
+        f'<div class="los-insight">{prefix}{text}</div>',
         unsafe_allow_html=True,
     )
 
@@ -821,7 +861,7 @@ def insight_card(text: str, icon: str = "→"):
 def info_card(text: str):
     """Renders a styled info card (indigo accent)."""
     st.markdown(
-        f'<div class="los-banner los-banner-info">ℹ️ {text}</div>',
+        f'<div class="los-banner los-banner-info">{text}</div>',
         unsafe_allow_html=True,
     )
 

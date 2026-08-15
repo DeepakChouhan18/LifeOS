@@ -121,7 +121,7 @@ def _render_today_cards(summary):
             label="Study Streak",
             value=f"{streak} days",
             subtitle=f"Longest {longest} days",
-            delta="🔥 On fire!" if streak >= 7 else "",
+            delta="7-day streak active" if streak >= 7 else "",
             delta_type="up" if streak >= 7 else "neutral",
             accent_color="#a855f7",
         )
@@ -134,7 +134,7 @@ def _render_priorities(summary):
     if not priorities:
         ui_components.empty_state(
             "No priorities yet",
-            icon="✓",
+            icon="",
             hint="Add high-priority tasks in Study to populate this list.",
         )
         return
@@ -162,7 +162,7 @@ def _render_priorities(summary):
             st.session_state.page = "Study"
             st.rerun()
     with col_b:
-        if st.button("Study Session →", key="dash_study", use_container_width=True):
+        if st.button("Study Session", key="dash_study", use_container_width=True):
             st.session_state.page = "Study"
             st.rerun()
 
@@ -174,7 +174,7 @@ def _render_insights(summary):
     if not insights:
         ui_components.empty_state(
             "No insights yet",
-            icon="◎",
+            icon="",
             hint="Keep logging data for a few days to unlock personalized insights.",
         )
         return

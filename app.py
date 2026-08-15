@@ -36,12 +36,12 @@ ui_components.inject_custom_css()
 # ---------------------------------------------------------------------------
 
 NAV_ITEMS = [
-    ("Dashboard", "🏠 Dashboard"),
-    ("Study",     "📚 Study"),
-    ("Health",    "❤️ Health"),
-    ("Finance",   "💰 Finance"),
-    ("Insights",  "🔎 Insights"),
-    ("Settings",  "⚙️ Settings"),
+    ("Dashboard", "Dashboard"),
+    ("Study",     "Study"),
+    ("Health",    "Health"),
+    ("Finance",   "Finance"),
+    ("Insights",  "Insights"),
+    ("Settings",  "Settings"),
 ]
 
 
@@ -67,10 +67,10 @@ def _render_login():
         st.markdown(
             """
             <div style="text-align:center; margin-bottom:2rem;">
-                <div style="font-size:1.6rem; font-weight:800; letter-spacing:-0.03em; color:#f8fafc; margin-bottom:0.3rem;">◆ LifeOS</div>
-                <div style="font-size:0.875rem; color:#475569;">Your personal operating system.</div>
+                <div style="font-size:1.6rem; font-weight:800; letter-spacing:-0.03em; color:#f8fafc; margin-bottom:0.3rem;">LifeOS</div>
+                <div style="font-size:0.875rem; color:#475569;">Personal Analytics Platform</div>
             </div>
-            <div style="font-size:1.2rem; font-weight:700; color:#f8fafc; margin-bottom:1.5rem; letter-spacing:-0.02em;">Welcome back.</div>
+            <div style="font-size:1.2rem; font-weight:700; color:#f8fafc; margin-bottom:1.5rem; letter-spacing:-0.02em;">Sign In</div>
             """,
             unsafe_allow_html=True,
         )
@@ -102,7 +102,7 @@ def _render_login():
             "Don't have an account?</p>",
             unsafe_allow_html=True,
         )
-        if st.button("Create one →", key="goto_signup", use_container_width=True):
+        if st.button("Create an account", key="goto_signup", use_container_width=True):
             st.session_state["auth_mode"] = "signup"
             st.rerun()
 
@@ -135,10 +135,10 @@ def _render_signup():
         st.markdown(
             """
             <div style="text-align:center; margin-bottom:2rem;">
-                <div style="font-size:1.6rem; font-weight:800; letter-spacing:-0.03em; color:#f8fafc; margin-bottom:0.3rem;">◆ LifeOS</div>
-                <div style="font-size:0.875rem; color:#475569;">Your personal operating system.</div>
+                <div style="font-size:1.6rem; font-weight:800; letter-spacing:-0.03em; color:#f8fafc; margin-bottom:0.3rem;">LifeOS</div>
+                <div style="font-size:0.875rem; color:#475569;">Personal Analytics Platform</div>
             </div>
-            <div style="font-size:1.2rem; font-weight:700; color:#f8fafc; margin-bottom:1.5rem; letter-spacing:-0.02em;">Create your account.</div>
+            <div style="font-size:1.2rem; font-weight:700; color:#f8fafc; margin-bottom:1.5rem; letter-spacing:-0.02em;">Create your account</div>
             """,
             unsafe_allow_html=True,
         )
@@ -196,7 +196,7 @@ def _render_signup():
             "Already have an account?</p>",
             unsafe_allow_html=True,
         )
-        if st.button("Sign in →", key="goto_login", use_container_width=True):
+        if st.button("Sign in", key="goto_login", use_container_width=True):
             st.session_state["auth_mode"] = "login"
             st.rerun()
 
@@ -212,8 +212,8 @@ def _render_sidebar(user_id: int) -> str:
     st.sidebar.markdown(
         """
         <div style="padding:1.25rem 1rem 0.75rem 1rem; border-bottom:1px solid #1a2540; margin-bottom:0.75rem;">
-            <div style="font-size:1.15rem; font-weight:800; letter-spacing:-0.03em; color:#f8fafc;">◆ LifeOS</div>
-            <div style="font-size:0.7rem; color:#475569; font-weight:600; letter-spacing:0.06em; text-transform:uppercase; margin-top:0.15rem;">Personal OS</div>
+            <div style="font-size:1.15rem; font-weight:800; letter-spacing:-0.03em; color:#f8fafc;">LifeOS</div>
+            <div style="font-size:0.7rem; color:#475569; font-weight:600; letter-spacing:0.06em; text-transform:uppercase; margin-top:0.15rem;">Analytics Platform</div>
         </div>
         <div style="font-size:0.7rem; font-weight:700; color:#475569; text-transform:uppercase; letter-spacing:0.08em; padding:0.2rem 0.5rem 0.4rem 0.5rem;">Navigation</div>
         """,
@@ -231,7 +231,28 @@ def _render_sidebar(user_id: int) -> str:
             st.session_state.page = name
             st.rerun()
 
+    # User profile footer pill
+    display_name = auth_utils.get_current_display_name()
+    email = auth_utils.get_current_email()
+    initials = "".join(p[0].upper() for p in display_name.split()[:2]) if display_name else "U"
+    
+    st.sidebar.markdown(
+        f"""
+        <div style="margin-top:auto; padding-top:1.5rem;">
+            <div class="los-sidebar-profile">
+                <div class="los-sidebar-avatar">{initials}</div>
+                <div style="min-width:0;">
+                    <div class="los-sidebar-name">{display_name}</div>
+                    <div class="los-sidebar-email">{email}</div>
+                </div>
+            </div>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+
     return st.session_state.page
+
 
 
 def _route_page(page: str, user_id: int):

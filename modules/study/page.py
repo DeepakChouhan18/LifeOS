@@ -137,7 +137,7 @@ def _render_today_tab(db, user_id: int):
         if not pending_tasks:
             ui_components.empty_state(
                 "All clear — no pending tasks",
-                icon="✓",
+                icon="",
                 hint="Add tasks in the Tasks tab to track your study goals.",
             )
         else:
@@ -197,7 +197,7 @@ def _render_study_timer(db, subjects, user_id: int):
             timer_subject = st.selectbox("Select subject", subject_names, key="timer_subject_select")
         with col_start:
             st.markdown("<div style='margin-top:1.55rem;'></div>", unsafe_allow_html=True)
-            if st.button("▶ Start Timer", type="primary", use_container_width=True, key="timer_start_btn"):
+            if st.button("Start Timer", type="primary", use_container_width=True, key="timer_start_btn"):
                 st.session_state.timer_start = datetime.now(timezone.utc)
                 st.session_state.timer_subject = timer_subject
                 st.rerun()
@@ -215,7 +215,7 @@ def _render_study_timer(db, subjects, user_id: int):
 
         with col_controls:
             st.markdown("<div style='margin-top:1rem;'></div>", unsafe_allow_html=True)
-            if st.button("■ Finish & Save", type="primary", use_container_width=True, key="timer_finish"):
+            if st.button("Finish & Save", type="primary", use_container_width=True, key="timer_finish"):
                 subj = next((s for s in subjects if s.name == st.session_state.timer_subject), None)
                 duration = max(1, round(elapsed_sec / 60.0))
                 if subj:
@@ -225,7 +225,7 @@ def _render_study_timer(db, subjects, user_id: int):
                 st.session_state.timer_subject = None
                 st.rerun()
             st.markdown("<div style='margin-top:0.4rem;'></div>", unsafe_allow_html=True)
-            if st.button("✕ Cancel", use_container_width=True, key="timer_cancel"):
+            if st.button("Cancel", use_container_width=True, key="timer_cancel"):
                 st.session_state.timer_start = None
                 st.session_state.timer_subject = None
                 st.rerun()
@@ -267,7 +267,7 @@ def _render_tasks_tab(db, user_id: int):
         if not tasks:
             ui_components.empty_state(
                 "No tasks yet",
-                icon="✓",
+                icon="",
                 hint="Use the form to add your first study task.",
             )
             return
@@ -328,7 +328,7 @@ def _render_task_row(db, task):
                     crud.uncomplete_task(db, task.id)
                     st.rerun()
             else:
-                if st.button("✓ Done", key=f"comp_{task.id}", type="primary", use_container_width=True):
+                if st.button("Complete", key=f"comp_{task.id}", type="primary", use_container_width=True):
                     crud.complete_task(db, task.id)
                     st.rerun()
         with col_btn2:
@@ -371,7 +371,7 @@ def _render_sessions_tab(db, user_id: int):
         if not sessions:
             ui_components.empty_state(
                 "No study sessions yet",
-                icon="📚",
+                icon="",
                 hint="Start your first session using the Quick Log or Timer.",
             )
             return
@@ -422,7 +422,7 @@ def _render_subjects_tab(db, user_id: int):
         if not subjects:
             ui_components.empty_state(
                 "No subjects yet",
-                icon="📖",
+                icon="",
                 hint="Add subjects like DSA, Python, or SQL to organize your sessions.",
             )
             return
@@ -470,7 +470,7 @@ def _render_analytics_tab(db, user_id: int):
         else:
             ui_components.empty_state(
                 "No subject data yet",
-                icon="◎",
+                icon="",
                 hint="Log sessions with different subjects to see the breakdown.",
             )
     with col2:
@@ -480,6 +480,6 @@ def _render_analytics_tab(db, user_id: int):
         else:
             ui_components.empty_state(
                 "Not enough data for trend analysis",
-                icon="◎",
+                icon="",
                 hint="Log at least a week of sessions to see your rolling trend.",
             )

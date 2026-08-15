@@ -32,10 +32,10 @@ def render_onboarding(db, user_id: int):
         f"""
         <div style="text-align:center; padding:2rem 0 1rem 0;">
             <div style="font-size:2rem; font-weight:800; letter-spacing:-0.04em; color:#f8fafc; margin:0 0 0.4rem 0;">
-                Welcome, {display_name}! 👋
+                Welcome, {display_name}
             </div>
             <p style="font-size:1rem; color:#475569; margin:0;">
-                Let's set up your LifeOS. This takes about 2 minutes.
+                Let's set up your LifeOS profile and preferences.
             </p>
         </div>
         """,
@@ -53,7 +53,6 @@ def render_onboarding(db, user_id: int):
             st.markdown(
                 """
                 <div class="los-choice-card">
-                    <span class="los-choice-icon">🌱</span>
                     <p class="los-choice-title">Start Fresh</p>
                     <p class="los-choice-desc">Begin with a clean database. Configure your profile and immediately start logging your own data.</p>
                 </div>
@@ -69,7 +68,6 @@ def render_onboarding(db, user_id: int):
             st.markdown(
                 """
                 <div class="los-choice-card">
-                    <span class="los-choice-icon">🧪</span>
                     <p class="los-choice-title">Explore Demo Data</p>
                     <p class="los-choice-desc">Seed ~5 weeks of simulated productivity, health, and expense data to explore all charts and ML insights first.</p>
                 </div>
@@ -118,7 +116,7 @@ def render(user_id: int):
             )
 
         tab_account, tab_weights, tab_privacy = st.tabs([
-            "👤 Account & Profile", "⚖️ Consistency Score", "🔒 Data & Privacy"
+            "Account & Profile", "Consistency Score", "Data & Privacy"
         ])
 
         with tab_account:
@@ -175,12 +173,12 @@ def _render_account_and_profile(db, user_id: int, profile):
 def _render_profile_form(db, user_id: int, is_demo: bool = False, on_first_launch: bool = False):
     profile = settings_crud.get_user_profile(db, user_id)
 
-    activity_options = ["select", "sedentary", "light", "moderate", "active", "very_active"]
+    activity_options = ["sedentary", "light", "moderate", "active", "very_active"]
 
-    if profile and profile.activity_level in activity_options and profile.activity_level != "select":
+    if profile and profile.activity_level in activity_options:
         act_idx = activity_options.index(profile.activity_level)
     else:
-        act_idx = 0  # "select" -> "Select Activity Level"
+        act_idx = 2  # Default to moderate
 
     with st.form("profile_form"):
         col1, col2 = st.columns(2, gap="large")
@@ -199,7 +197,7 @@ def _render_profile_form(db, user_id: int, is_demo: bool = False, on_first_launc
                 "Activity level",
                 activity_options,
                 index=act_idx,
-                format_func=lambda x: health_calc.ACTIVITY_LABELS.get(x, "Select Activity Level"),
+                format_func=lambda x: health_calc.ACTIVITY_LABELS.get(x, x.title()),
                 help="Select your exercise frequency for TDEE calorie target calculations.",
             )
             goal = st.selectbox(
@@ -231,7 +229,7 @@ def _render_profile_form(db, user_id: int, is_demo: bool = False, on_first_launc
         submitted = st.form_submit_button("Save Profile", type="primary", use_container_width=True)
 
         if submitted:
-            if activity_level == "select" or not activity_level:
+            if not activity_level:
                 st.error("Please select your activity level.")
             else:
                 try:
@@ -361,7 +359,7 @@ def _render_score_weights(db, user_id: int, profile):
         if is_valid:
             st.markdown(
                 '<p style="font-weight:700; font-size:0.9rem; color:#22c55e; margin-top:0.5rem;">'
-                'Total: 1.00 ✓</p>',
+                'Total: 1.00</p>',
                 unsafe_allow_html=True,
             )
         else:
@@ -385,11 +383,11 @@ def _render_score_weights(db, user_id: int, profile):
             f'<div style="padding:1.25rem;background:#111927;border:1px solid #1e293b;border-radius:10px;">'
             f'<p style="font-size:0.7rem;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;color:#475569;margin:0 0 0.75rem 0;">Weight Distribution</p>'
             f'<div style="display:flex;justify-content:space-between;margin-bottom:0.5rem;font-size:0.85rem;">'
-            f'<span style="color:#a5b4fc;">📚 Study</span><b style="color:#e2e8f0;">{study_w*100:.0f}%</b></div>'
+            f'<span style="color:#a5b4fc;">Study</span><b style="color:#e2e8f0;">{study_w*100:.0f}%</b></div>'
             f'<div style="display:flex;justify-content:space-between;margin-bottom:0.5rem;font-size:0.85rem;">'
-            f'<span style="color:#6ee7b7;">❤️ Health</span><b style="color:#e2e8f0;">{health_w*100:.0f}%</b></div>'
+            f'<span style="color:#6ee7b7;">Health</span><b style="color:#e2e8f0;">{health_w*100:.0f}%</b></div>'
             f'<div style="display:flex;justify-content:space-between;font-size:0.85rem;">'
-            f'<span style="color:#fde68a;">💰 Finance</span><b style="color:#e2e8f0;">{finance_w*100:.0f}%</b></div>'
+            f'<span style="color:#fde68a;">Finance</span><b style="color:#e2e8f0;">{finance_w*100:.0f}%</b></div>'
             f'</div>',
             unsafe_allow_html=True,
         )

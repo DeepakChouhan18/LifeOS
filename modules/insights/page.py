@@ -28,7 +28,7 @@ def render(user_id: int):
 
     db = get_session()
     try:
-        tab_cross, tab_ml = st.tabs(["🔗 Cross-Domain Patterns", "🤖 Machine Learning"])
+        tab_cross, tab_ml = st.tabs(["Cross-Domain Patterns", "Machine Learning"])
 
         with tab_cross:
             _render_cross_domain_tab(db, user_id)
@@ -40,7 +40,7 @@ def render(user_id: int):
 
 
 def _render_cross_domain_tab(db, user_id: int):
-    ui_components.section_header("Cross-Domain Relationships", icon="🔗")
+    ui_components.section_header("Cross-Domain Relationships")
     st.caption(
         "These charts show observed patterns in your logged history. "
         "They represent correlations in your behavior, not causal relationships."
@@ -61,7 +61,7 @@ def _render_cross_domain_tab(db, user_id: int):
         else:
             ui_components.empty_state(
                 "Log at least 2 weeks of study and workouts to see this pattern.",
-                icon="🔗"
+                icon=""
             )
 
     with col2:
@@ -78,7 +78,7 @@ def _render_cross_domain_tab(db, user_id: int):
             fig = apply_chart_theme(fig, "Spending by Weekday")
             st.plotly_chart(fig, use_container_width=True, key="insights_weekday_spend")
         else:
-            ui_components.empty_state("No expense logs yet.", icon="💰")
+            ui_components.empty_state("No expense logs yet.", icon="")
 
 
 # Helper to get current week's features for next week prediction
@@ -138,7 +138,7 @@ def _render_ml_tab(db, user_id: int):
     # Clean action layout
     c_btn, c_info = st.columns([1, 3])
     with c_btn:
-        train_triggered = st.button("🔄 Train Models", type="primary", use_container_width=True)
+        train_triggered = st.button("Train Models", type="primary", use_container_width=True)
     with c_info:
         supervised_meta = ml_train.get_latest_metadata(db, user_id, "supervised")
         if supervised_meta:
@@ -148,7 +148,7 @@ def _render_ml_tab(db, user_id: int):
         with st.spinner("Processing data and training models..."):
             result = ml_train.run_training(db, user_id)
             st.session_state["ml_result"] = result
-        st.success("✅ Models trained and saved successfully!")
+        st.success("Models trained and saved successfully.")
         st.rerun()
 
     result = st.session_state.get("ml_result")
@@ -157,7 +157,7 @@ def _render_ml_tab(db, user_id: int):
     # Supervised: Weekly Study Goal Prediction
     # -----------------------------------------------------------------------
     st.markdown("<br>", unsafe_allow_html=True)
-    ui_components.section_header("Study Goal Prediction", subtitle="Forecasts whether you will meet your study goal next week based on your activity this week.", icon="📈")
+    ui_components.section_header("Study Goal Prediction", subtitle="Forecasts whether you will meet your study goal next week based on your activity this week.")
 
     if result and result["supervised"]["model"] is not None:
         bundle = result["supervised"]
@@ -171,7 +171,7 @@ def _render_ml_tab(db, user_id: int):
                 banner_variant = "success" if pred_res["prediction"] == 1 else "warning"
                 prob_pct = pred_res["probability"] * 100 if pred_res["prediction"] == 1 else (1.0 - pred_res["probability"]) * 100
                 ui_components.info_banner(
-                    f"🔮 **Prediction for next week:** {pred_label} (Confidence: **{prob_pct:.0f}%**)<br>"
+                    f"**Prediction for next week:** {pred_label} (Confidence: **{prob_pct:.0f}%**)<br>"
                     f"<span style='font-size:0.8rem; opacity:0.85;'>Estimated from your study, tasks, sleep, and fitness levels logged so far this week.</span>",
                     banner_type=banner_variant
                 )
@@ -179,7 +179,7 @@ def _render_ml_tab(db, user_id: int):
             ui_components.info_banner("Insufficient logged weeks to generate upcoming week prediction.")
 
         # Collapsible technical section
-        with st.expander("🛠️ Model Details & Evaluation Metrics"):
+        with st.expander("Model Details & Evaluation Metrics"):
             st.markdown(f"**Performance Summary:** {summarize_supervised(bundle)}")
             
             if bundle["status"] == "evaluated":
@@ -216,13 +216,13 @@ def _render_ml_tab(db, user_id: int):
                 fig = apply_chart_theme(fig, "Predictive Weights")
                 st.plotly_chart(fig, use_container_width=True, key="insights_coef_bar")
     else:
-        ui_components.empty_state("Click 'Train Models' to generate predictions.", icon="🔮")
+        ui_components.empty_state("Click 'Train Models' to generate predictions.", icon="")
 
     # -----------------------------------------------------------------------
     # Unsupervised: Day-Type Clustering
     # -----------------------------------------------------------------------
     st.markdown("<br>", unsafe_allow_html=True)
-    ui_components.section_header("Behavioral Clusters", subtitle="Groups your historical days into distinct patterns based on combined activities.", icon="🧩")
+    ui_components.section_header("Behavioral Clusters", subtitle="Groups your historical days into distinct patterns based on combined activities.")
 
     if result and result["cluster"]["model"] is not None:
         bundle = result["cluster"]
@@ -236,8 +236,8 @@ def _render_ml_tab(db, user_id: int):
                 char_list = [f"• {k.replace('_', ' ').title()}: {v}" for k, v in c["characteristics"].items()]
                 char_str = "<br>".join(char_list)
                 st.markdown(
-                    f'<div style="padding:1rem; background:#1e293b; border-radius:12px; border:1px solid #334155; height:100%;">'
-                    f'  <div style="font-weight:700; color:#818cf8; font-size:0.95rem; margin-bottom:0.4rem;">🔹 {c["label"]}</div>'
+                    f'<div style="padding:1rem; background:#111927; border-radius:10px; border:1px solid #1e293b; height:100%;">'
+                    f'  <div style="font-weight:700; color:#818cf8; font-size:0.95rem; margin-bottom:0.4rem;">{c["label"]}</div>'
                     f'  <div style="font-size:0.8rem; color:#94a3b8; font-weight:600; margin-bottom:0.6rem;">{c["day_count"]} day(s) matched</div>'
                     f'  <div style="font-size:0.8rem; color:#e2e8f0; line-height:1.4;">{char_str}</div>'
                     f'</div>',
@@ -245,7 +245,7 @@ def _render_ml_tab(db, user_id: int):
                 )
 
         st.markdown("<br>", unsafe_allow_html=True)
-        with st.expander("🛠️ Clustering Diagnostics & Scatter Plot"):
+        with st.expander("Clustering Diagnostics & Scatter Plot"):
             st.markdown(f"**Diagnostic Summary:** {summarize_clustering(bundle)}")
             
             labeled_df = bundle["labeled_df"]
@@ -258,4 +258,5 @@ def _render_ml_tab(db, user_id: int):
             fig = apply_chart_theme(fig, "Study Minutes vs. Calories by Cluster")
             st.plotly_chart(fig, use_container_width=True, key="insights_cluster_scatter")
     else:
-        ui_components.empty_state("Click 'Train Models' to discover your day patterns.", icon="🧩")
+        ui_components.empty_state("Click 'Train Models' to discover your day patterns.", icon="")
+

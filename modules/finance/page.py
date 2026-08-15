@@ -113,7 +113,7 @@ def _render_overview_tab(db, user_id: int):
         else:
             ui_components.empty_state(
                 "No spending logged this month",
-                icon="◎",
+                icon="",
                 hint="Log your first expense on the left to populate the chart.",
             )
 
@@ -151,7 +151,7 @@ def _render_expenses_tab(db, user_id: int):
         if not expenses:
             ui_components.empty_state(
                 "No expenses logged yet",
-                icon="◎",
+                icon="",
                 hint="Log transactions using the quick add form on the Overview tab.",
             )
             return
@@ -178,7 +178,7 @@ def _render_expenses_tab(db, user_id: int):
                 )
             with col_del:
                 st.markdown("<div style='margin-top:0.6rem;'></div>", unsafe_allow_html=True)
-                if st.button("✕", key=f"del_exp_{exp.id}", use_container_width=True):
+                if st.button("Delete", key=f"del_exp_{exp.id}", use_container_width=True):
                     crud.delete_expense(db, exp.id)
                     st.rerun()
 
@@ -221,7 +221,7 @@ def _render_budget_tab(db, user_id: int):
         if budget_df.empty:
             ui_components.empty_state(
                 "No budgets configured for this month",
-                icon="◎",
+                icon="",
                 hint="Set a category limit to track your spending against targets.",
             )
         else:
@@ -250,7 +250,7 @@ def _render_analytics_tab(db, user_id: int):
         if fig:
             st.plotly_chart(fig, use_container_width=True, key="fin_analytics_cat_pie")
         else:
-            ui_components.empty_state("No category data yet", icon="◎")
+            ui_components.empty_state("No category data yet", icon="")
 
     with col2:
         trend_df = analytics.get_spend_trend_df(db, user_id)
@@ -258,14 +258,14 @@ def _render_analytics_tab(db, user_id: int):
         if fig:
             st.plotly_chart(fig, use_container_width=True, key="fin_spend_trend_line")
         else:
-            ui_components.empty_state("Not enough data for trend analysis", icon="◎")
+            ui_components.empty_state("Not enough data for trend analysis", icon="")
 
     st.markdown("<hr style='border-color:#1a2540;margin:1.25rem 0;'>", unsafe_allow_html=True)
 
     ui_components.section_header("LARGEST EXPENSES THIS MONTH")
     largest = analytics.get_largest_expenses(db, user_id)
     if not largest:
-        ui_components.empty_state("No expenses logged yet", icon="◎")
+        ui_components.empty_state("No expenses logged yet", icon="")
     else:
         for exp in largest:
             date_lbl = date_helpers.format_date(exp['expense_date'])

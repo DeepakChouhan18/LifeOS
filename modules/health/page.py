@@ -32,7 +32,7 @@ def render(user_id: int):
         if not profile:
             ui_components.empty_state(
                 "Complete your profile in Settings to unlock health targets.",
-                icon="◎",
+                icon="",
                 hint="Your height, weight, activity level, and goal are used to estimate daily targets.",
             )
             return
@@ -252,12 +252,12 @@ def _render_nutrition(db, user_id: int):
         if fig:
             st.plotly_chart(fig, use_container_width=True, key="health_macro_donut")
         else:
-            ui_components.empty_state("No foods logged today", icon="◎", hint="Add meals using the form.")
+            ui_components.empty_state("No foods logged today", icon="", hint="Add meals using the form.")
 
         if todays_logs:
             st.markdown("<div style='height:0.5rem;'></div>", unsafe_allow_html=True)
             for log in todays_logs:
-                l_col1, l_col2, l_col3 = st.columns([3, 1.2, 0.8])
+                l_col1, l_col2, l_col3 = st.columns([3, 1.2, 1.0])
                 with l_col1:
                     st.markdown(
                         f'<div style="font-weight:600;font-size:0.875rem;color:#e2e8f0;">{log.meal_name}</div>'
@@ -272,10 +272,10 @@ def _render_nutrition(db, user_id: int):
                     )
                 with l_col3:
                     sub_c1, sub_c2 = st.columns(2)
-                    if sub_c1.button("⎘", key=f"dup_{log.id}", help="Duplicate"):
+                    if sub_c1.button("Copy", key=f"dup_{log.id}", help="Duplicate"):
                         crud.duplicate_nutrition_log(db, log.id)
                         st.rerun()
-                    if sub_c2.button("✕", key=f"del_food_{log.id}", help="Delete"):
+                    if sub_c2.button("Delete", key=f"del_food_{log.id}", help="Delete"):
                         crud.delete_nutrition_log(db, log.id)
                         st.rerun()
                 st.markdown('<hr style="border-color:#1a2540;margin:0.25rem 0;">', unsafe_allow_html=True)
@@ -317,7 +317,7 @@ def _render_workout(db, user_id: int):
         if not workouts:
             ui_components.empty_state(
                 "No workouts logged yet",
-                icon="◎",
+                icon="",
                 hint="Use the form to log your first workout session.",
             )
         else:
@@ -378,7 +378,7 @@ def _render_weight(db, user_id: int):
             if progress["change"] is not None:
                 st.caption(f"Net change: {progress['change']:+.1f} kg")
         else:
-            empty_state("No weight data yet", icon="◎", hint="Log your weight to track your journey.")
+            empty_state("No weight data yet", icon="", hint="Log your weight to track your journey.")
 
     with col_trend:
         ui_components.section_header("WEIGHT TREND")
@@ -387,7 +387,7 @@ def _render_weight(db, user_id: int):
         if fig:
             st.plotly_chart(fig, use_container_width=True, key="health_weight_trend_chart")
         else:
-            empty_state("No weight logs yet", icon="◎", hint="Log your weight over several days to build a trend.")
+            empty_state("No weight logs yet", icon="", hint="Log your weight over several days to build a trend.")
 
 
 # =======================================================================
@@ -421,14 +421,14 @@ def _render_analytics(db, user_id: int):
         if fig:
             st.plotly_chart(fig, use_container_width=True, key="health_weekly_calorie_chart")
         else:
-            empty_state("Not enough nutrition logs", icon="◎")
+            empty_state("Not enough nutrition logs", icon="")
     with col2:
         workout_df = analytics.get_workout_consistency_df(db, user_id)
         fig = workout_consistency_bar(workout_df)
         if fig:
             st.plotly_chart(fig, use_container_width=True, key="health_workouts_weekly_chart")
         else:
-            empty_state("No workouts logged yet", icon="◎")
+            empty_state("No workouts logged yet", icon="")
 
     st.markdown("<hr style='border-color:#1a2540;margin:1.25rem 0;'>", unsafe_allow_html=True)
 
@@ -457,6 +457,6 @@ def _render_analytics(db, user_id: int):
     else:
         empty_state(
             "Observed estimate not available yet",
-            icon="◎",
+            icon="",
             hint=observed["message"],
         )

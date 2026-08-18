@@ -65,9 +65,15 @@ def _date_sub(col: str, days: int, pg: bool) -> str:
 
 
 def _date_sub_col(date_col: str, n_col: str, pg: bool) -> str:
-    """Subtract an integer column's day-count from a date column."""
+    """Subtract an integer column's day-count from a date column.
+
+    PostgreSQL note: ROW_NUMBER() returns bigint (int8), but the
+    ``date - integer`` operator requires int4.  The ``::integer`` cast
+    is essential; without it PostgreSQL raises
+    "operator does not exist: date - bigint".
+    """
     if pg:
-        return f"({date_col} - {n_col})"
+        return f"({date_col} - {n_col}::integer)"
     return f"DATE({date_col}, '-' || {n_col} || ' days')"
 
 

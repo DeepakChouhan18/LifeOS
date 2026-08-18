@@ -41,7 +41,15 @@ def migrate_columns():
     Auto-migrates new columns onto an existing SQLite database file.
     SQLite's ALTER TABLE ADD COLUMN is safe to attempt repeatedly —
     failures (column already exists) are silently ignored.
+
+    This function is a no-op when running against PostgreSQL: SQLAlchemy's
+    Base.metadata.create_all() already handles idempotent schema creation
+    on Postgres, and raw sqlite3 ALTER TABLE statements are not needed there.
     """
+    from config import DATABASE_URL
+    if not DATABASE_URL.startswith("sqlite"):
+        return  # PostgreSQL: schema managed entirely by SQLAlchemy create_all
+
     if not os.path.exists(DB_PATH):
         return
 
@@ -80,6 +88,7 @@ def migrate_columns():
     # Remove old UNIQUE constraint on username if it was blocking (safe to ignore if already gone)
     conn.commit()
     conn.close()
+
 
 
 def ensure_tables():

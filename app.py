@@ -152,7 +152,7 @@ def _render_signup():
             )
 
         with st.form("signup_form", clear_on_submit=False):
-            name = st.text_input("Name", placeholder="Deepak Chouhan", key="signup_name")
+            name = st.text_input("Name", placeholder="Your full name", key="signup_name")
             email = st.text_input("Email", placeholder="you@example.com", key="signup_email")
             password = st.text_input("Password", type="password", placeholder="Min. 8 characters", key="signup_password")
             confirm = st.text_input("Confirm password", type="password", placeholder="••••••••", key="signup_confirm")

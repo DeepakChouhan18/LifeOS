@@ -175,10 +175,41 @@ def _render_today_tab(db, user_id: int):
 # ==========================================================================
 
 @st.fragment(run_every="1s")
+def _render_active_timer(db, subjects, user_id: int):
+    """Isolated ticking timer fragment — ONLY executes when a timer is active."""
+    now = datetime.now(timezone.utc)
+    elapsed_sec = int((now - st.session_state.timer_start).total_seconds())
+    elapsed_minutes = elapsed_sec // 60
+    elapsed_seconds = elapsed_sec % 60
+
+    ui_components.section_header("TIMER RUNNING")
+
+    col_timer, col_controls = st.columns([2, 1], gap="large")
+    with col_timer:
+        ui_components.timer_display(elapsed_minutes, elapsed_seconds, st.session_state.timer_subject)
+
+    with col_controls:
+        st.markdown("<div style='margin-top:1rem;'></div>", unsafe_allow_html=True)
+        if st.button("Finish & Save", type="primary", use_container_width=True, key="timer_finish"):
+            subj = next((s for s in subjects if s.name == st.session_state.timer_subject), None)
+            duration = max(1, round(elapsed_sec / 60.0))
+            if subj:
+                crud.log_session(db, user_id, subj.id, duration, date.today(), topic="Timed session")
+                st.success(f"Saved {duration} min session for {subj.name}.")
+            st.session_state.timer_start = None
+            st.session_state.timer_subject = None
+            st.rerun()
+        st.markdown("<div style='margin-top:0.4rem;'></div>", unsafe_allow_html=True)
+        if st.button("Cancel", use_container_width=True, key="timer_cancel"):
+            st.session_state.timer_start = None
+            st.session_state.timer_subject = None
+            st.rerun()
+
+
 def _render_study_timer(db, subjects, user_id: int):
     """
-    Isolated timer fragment. Automatically reruns every 1 second via
-    Streamlit native fragment scheduling when a timer is running.
+    Timer controller. When idle, does NOT use any background interval or polling,
+    ensuring zero lag across the app.
     """
     subject_names = [s.name for s in subjects]
 
@@ -186,7 +217,9 @@ def _render_study_timer(db, subjects, user_id: int):
         st.session_state.timer_start = None
         st.session_state.timer_subject = None
 
-    if st.session_state.timer_start is None:
+    if st.session_state.timer_start is not None:
+        _render_active_timer(db, subjects, user_id)
+    else:
         ui_components.section_header("STUDY TIMER")
         if not subject_names:
             st.caption("Add a subject first to use the timer.")
@@ -201,34 +234,7 @@ def _render_study_timer(db, subjects, user_id: int):
                 st.session_state.timer_start = datetime.now(timezone.utc)
                 st.session_state.timer_subject = timer_subject
                 st.rerun()
-    else:
-        now = datetime.now(timezone.utc)
-        elapsed_sec = int((now - st.session_state.timer_start).total_seconds())
-        elapsed_minutes = elapsed_sec // 60
-        elapsed_seconds = elapsed_sec % 60
 
-        ui_components.section_header("TIMER RUNNING")
-
-        col_timer, col_controls = st.columns([2, 1], gap="large")
-        with col_timer:
-            ui_components.timer_display(elapsed_minutes, elapsed_seconds, st.session_state.timer_subject)
-
-        with col_controls:
-            st.markdown("<div style='margin-top:1rem;'></div>", unsafe_allow_html=True)
-            if st.button("Finish & Save", type="primary", use_container_width=True, key="timer_finish"):
-                subj = next((s for s in subjects if s.name == st.session_state.timer_subject), None)
-                duration = max(1, round(elapsed_sec / 60.0))
-                if subj:
-                    crud.log_session(db, user_id, subj.id, duration, date.today(), topic="Timed session")
-                    st.success(f"Saved {duration} min session for {subj.name}.")
-                st.session_state.timer_start = None
-                st.session_state.timer_subject = None
-                st.rerun()
-            st.markdown("<div style='margin-top:0.4rem;'></div>", unsafe_allow_html=True)
-            if st.button("Cancel", use_container_width=True, key="timer_cancel"):
-                st.session_state.timer_start = None
-                st.session_state.timer_subject = None
-                st.rerun()
 
 
 # ==========================================================================

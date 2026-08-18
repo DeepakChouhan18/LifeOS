@@ -120,7 +120,7 @@ def generate_insights(session, user_id: int) -> list:
     return insights[:5]
 
 
-def get_todays_priorities(session, user_id: int) -> list:
+def get_todays_priorities(session, user_id: int, health_summary: dict = None) -> list:
     """
     Builds a real "today's priorities" checklist from actual incomplete
     items — never a hardcoded list.
@@ -133,15 +133,17 @@ def get_todays_priorities(session, user_id: int) -> list:
     for task in high_priority[:2]:
         priorities.append({"label": task.title, "done": False})
 
-    health_summary = health_analytics.get_full_summary(session, user_id)
-    if not health_summary["workout_completed_today"]:
+    if health_summary is None:
+        health_summary = health_analytics.get_full_summary(session, user_id)
+
+    if not health_summary.get("workout_completed_today"):
         priorities.append({"label": "Workout", "done": False})
     else:
         priorities.append({"label": "Workout", "done": True})
 
-    if health_summary["calorie_target"] and health_summary["calories_today"] <= health_summary["calorie_target"]:
+    if health_summary.get("calorie_target") and health_summary.get("calories_today", 0) <= health_summary["calorie_target"]:
         priorities.append({"label": "Stay within calorie target", "done": True})
-    elif health_summary["calorie_target"]:
+    elif health_summary.get("calorie_target"):
         priorities.append({"label": "Stay within calorie target", "done": False})
 
     return priorities[:5]
@@ -170,5 +172,6 @@ def get_combined_summary(session, user_id: int) -> dict:
         },
         "weights": weights,
         "insights": generate_insights(session, user_id),
-        "priorities": get_todays_priorities(session, user_id),
+        "priorities": get_todays_priorities(session, user_id, health_summary=health_summary),
     }
+

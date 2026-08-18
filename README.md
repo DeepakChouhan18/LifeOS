@@ -251,7 +251,26 @@ deployment starts empty (or with demo data, by the visitor's own choice).
 
 ## Limitations
 
-- **Concurrency / SQLite storage**: Uses SQLite as the embedded database engine; while every table is indexed on `user_id` for strict multi-user data isolation, high write-concurrency multi-instance setups should migrate to PostgreSQL.
+- **⚠️ Ephemeral storage on Streamlit Community Cloud**: Streamlit Community Cloud runs
+  the app in a container whose filesystem is wiped on every restart, redeploy, or sleep
+  cycle. If `DATABASE_URL` is not set, the app falls back to a local SQLite file
+  (`data/lifeos.db`) that lives on that ephemeral disk — **all user accounts and data are
+  permanently lost on every restart**. To avoid this you must point the app at a
+  persistent PostgreSQL database before going live:
+  1. Provision a free PostgreSQL database on [Supabase](https://supabase.com),
+     [Neon](https://neon.tech), or [Railway](https://railway.app).
+  2. Copy the connection string (it looks like
+     `postgresql://user:pass@host:5432/dbname`).
+  3. In Streamlit Community Cloud → your app → **Settings → Secrets**, add:
+     ```toml
+     DATABASE_URL = "postgresql://user:pass@host:5432/dbname"
+     ```
+  4. Redeploy — `config.py` will pick up `st.secrets["DATABASE_URL"]`
+     automatically (env var > st.secrets > SQLite fallback).
+
+- **Concurrency / SQLite storage**: Uses SQLite as the embedded database engine; while
+  every table is indexed on `user_id` for strict multi-user data isolation, high
+  write-concurrency multi-instance setups should migrate to PostgreSQL.
 - **ML accuracy on small datasets**: with only a few weeks of real history,
   the supervised model will usually report "not enough data" rather than a
   metric — this is intentional (see Machine Learning section above), but it

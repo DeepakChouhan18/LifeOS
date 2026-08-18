@@ -3,10 +3,10 @@ Central config for LifeOS.
 Keep DB paths, constants, and settings here so nothing is hardcoded
 across modules.
 
-DATABASE_URL priority:
-  1. DATABASE_URL environment variable (set this for PostgreSQL in production)
-  2. STREAMLIT secrets (st.secrets) — used on Streamlit Cloud
-  3. Fallback: SQLite file at data/lifeos.db (local development default)
+DATABASE_URL priority (checked in order):
+  1. DATABASE_URL environment variable  — highest priority; set for PostgreSQL in production.
+  2. st.secrets["DATABASE_URL"]         — Streamlit Community Cloud secrets manager.
+  3. SQLite fallback at data/lifeos.db  — local development ONLY; NOT safe for production.
 """
 
 import os
@@ -24,13 +24,47 @@ BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 DATA_DIR = os.path.join(BASE_DIR, "data")
 DB_PATH = os.path.join(DATA_DIR, "lifeos.db")
 
-# DATABASE_URL: prefer env var (for PostgreSQL in production), else local SQLite
-_env_db_url = os.environ.get("DATABASE_URL", "")
-if _env_db_url:
-    # Heroku / Railway / Render provide "postgres://..." — SQLAlchemy needs "postgresql://..."
-    DATABASE_URL = _env_db_url.replace("postgres://", "postgresql://", 1)
-else:
-    DATABASE_URL = f"sqlite:///{DB_PATH}"
+
+def _resolve_database_url() -> str:
+    """
+    Resolve DATABASE_URL in priority order:
+
+    1. DATABASE_URL environment variable (highest priority)
+    2. st.secrets["DATABASE_URL"] — Streamlit Community Cloud secrets manager
+    3. SQLite file fallback (local development only)
+
+    "postgres://" is normalised to "postgresql://" for SQLAlchemy compatibility
+    in both env-var and st.secrets paths.
+    """
+    # --- Priority 1: environment variable ---
+    env_url = os.environ.get("DATABASE_URL", "").strip()
+    if env_url:
+        return env_url.replace("postgres://", "postgresql://", 1)
+
+    # --- Priority 2: Streamlit secrets ---
+    # st.secrets raises FileNotFoundError (or KeyError) when no secrets file
+    # exists (e.g. during local development / pytest), so wrap defensively.
+    try:
+        import streamlit as st
+        secrets_url = st.secrets.get("DATABASE_URL", "")
+        if secrets_url:
+            return secrets_url.replace("postgres://", "postgresql://", 1)
+    except Exception:
+        # Streamlit not installed, no secrets file present, or running outside
+        # a Streamlit context — silently continue to the SQLite fallback.
+        pass
+
+    # --- Priority 3: SQLite fallback (LOCAL DEVELOPMENT ONLY) ---
+    # ⚠️  WARNING: Streamlit Community Cloud's filesystem is EPHEMERAL.
+    # Every app restart / redeploy / sleep cycle wipes the container disk,
+    # which deletes data/lifeos.db and all user accounts stored in it.
+    # Do NOT rely on this fallback in production.  Set DATABASE_URL to a
+    # persistent PostgreSQL instance (e.g. Supabase, Neon, Railway) via
+    # Streamlit Cloud's "Secrets" settings panel before going live.
+    return f"sqlite:///{DB_PATH}"
+
+
+DATABASE_URL = _resolve_database_url()
 
 # DEFAULT_USER_ID: the legacy single-user id for backward compatibility.
 # This user is created automatically on first launch and can be claimed

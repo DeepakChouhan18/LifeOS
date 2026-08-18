@@ -17,11 +17,13 @@ from config import DATABASE_URL, DATA_DIR
 # Make sure the data/ folder exists before SQLite tries to create the file
 os.makedirs(DATA_DIR, exist_ok=True)
 
-# check_same_thread=False is needed because Streamlit can access the
+# check_same_thread=False is required for SQLite when Streamlit accesses the
 # connection from a different thread than the one that created it.
+# PostgreSQL drivers do NOT accept this argument, so we only pass it for SQLite.
+_is_sqlite = DATABASE_URL.startswith("sqlite")
 engine = create_engine(
     DATABASE_URL,
-    connect_args={"check_same_thread": False},
+    connect_args={"check_same_thread": False} if _is_sqlite else {},
 )
 
 SessionLocal = sessionmaker(bind=engine, autoflush=False, autocommit=False)

@@ -29,12 +29,25 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 # ─────────────────────────────────────────────────────────────────────────────
 
 def _is_pg() -> bool:
-    """Return True when the configured DATABASE_URL targets PostgreSQL."""
+    """Return True when the running engine targets PostgreSQL.
+
+    Reads from the SQLAlchemy engine's dialect rather than config.DATABASE_URL.
+    This is essential on Streamlit Cloud: config.DATABASE_URL is resolved once
+    at module import time, before st.secrets is necessarily available, so it
+    can fall back to the SQLite URL even when the engine is connected to
+    PostgreSQL.  The engine dialect is always the ground truth.
+    """
     try:
-        from config import DATABASE_URL
-        return DATABASE_URL.startswith("postgresql")
+        from database.connection import engine          # no circular import
+        return engine.dialect.name == "postgresql"
     except Exception:
-        return False
+        # Fallback for tests (SQLite in-memory engine) or import errors
+        try:
+            from config import DATABASE_URL
+            return DATABASE_URL.startswith("postgresql")
+        except Exception:
+            return False
+
 
 
 # ─────────────────────────────────────────────────────────────────────────────

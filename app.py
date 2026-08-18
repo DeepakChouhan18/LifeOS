@@ -12,13 +12,6 @@ Architecture:
 """
 
 import streamlit as st
-from database.connection import get_session
-from database import init_db
-from utils import ui_components, date_helpers, auth as auth_utils
-from config import DEFAULT_USER_ID, APP_NAME
-
-# ---- Bootstrap: create/migrate DB tables on every startup ----
-init_db.ensure_tables()
 
 st.set_page_config(
     page_title="LifeOS — Personal Analytics Platform",
@@ -27,8 +20,22 @@ st.set_page_config(
     initial_sidebar_state="expanded",
 )
 
+from database.connection import get_session
+from database import init_db
+from utils import ui_components, date_helpers, auth as auth_utils
+from config import DEFAULT_USER_ID, APP_NAME
+
+# ---- Bootstrap: create/migrate DB tables once per container startup ----
+@st.cache_resource
+def _bootstrap_database():
+    init_db.ensure_tables()
+    return True
+
+_bootstrap_database()
+
 # Inject global design system CSS
 ui_components.inject_custom_css()
+
 
 
 # ---------------------------------------------------------------------------

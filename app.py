@@ -238,26 +238,6 @@ def _render_sidebar(user_id: int) -> str:
             st.session_state.page = name
             st.rerun()
 
-    # User profile footer pill
-    display_name = auth_utils.get_current_display_name()
-    email = auth_utils.get_current_email()
-    initials = "".join(p[0].upper() for p in display_name.split()[:2]) if display_name else "U"
-    
-    st.sidebar.markdown(
-        f"""
-        <div style="margin-top:auto; padding-top:1.5rem;">
-            <div class="los-sidebar-profile">
-                <div class="los-sidebar-avatar">{initials}</div>
-                <div style="min-width:0;">
-                    <div class="los-sidebar-name">{display_name}</div>
-                    <div class="los-sidebar-email">{email}</div>
-                </div>
-            </div>
-        </div>
-        """,
-        unsafe_allow_html=True,
-    )
-
     return st.session_state.page
 
 

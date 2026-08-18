@@ -49,11 +49,37 @@ def inject_custom_css():
         background-color: #090d16 !important;
     }
 
+    /* ---- Smooth interaction & Anti-dimming reset ---- */
+    /* Streamlit by default fades/dims widgets and containers to 0.4 opacity on every rerun */
+    .stApp,
+    [data-testid="stAppViewContainer"],
+    [data-testid="stAppViewBlockContainer"],
+    div[data-testid="stVerticalBlock"],
+    .element-container,
+    [data-testid="stMetric"],
+    [data-testid="stPlotlyChart"],
+    div[data-testid="stTabs"] {
+        opacity: 1 !important;
+        filter: none !important;
+        transition: none !important;
+    }
+
+    .stApp[data-test-script-state="running"] [data-testid="stVerticalBlock"],
+    .stApp[data-test-script-state="running"] .element-container {
+        opacity: 1 !important;
+    }
+
+    /* Prevent top status widget from causing header flicker */
+    div[data-testid="stStatusWidget"] {
+        visibility: hidden !important;
+    }
+
     /* ---- Main content container ---- */
     .main .block-container {
         padding: 1.75rem 2.5rem 4rem 2.5rem !important;
         max-width: 1200px !important;
     }
+
 
     /* ====================================================================
        SIDEBAR — persistent application navigation

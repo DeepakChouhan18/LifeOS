@@ -23,14 +23,27 @@ _is_sqlite = DATABASE_URL.startswith("sqlite")
 # PostgreSQL drivers do NOT accept this argument.
 _connect_args = {"check_same_thread": False} if _is_sqlite else {}
 
+_engine_kwargs = {
+    "connect_args": _connect_args,
+    # pool_pre_ping sends a lightweight "SELECT 1" before handing a connection
+    # to the app, silently replacing stale ones. Essential for Neon's free
+    # tier which scales to zero between requests.
+    "pool_pre_ping": True,
+}
+
+if not _is_sqlite:
+    _engine_kwargs.update({
+        "pool_size": 10,
+        "max_overflow": 20,
+        "pool_recycle": 300,
+        "pool_timeout": 30,
+    })
+
 engine = create_engine(
     DATABASE_URL,
-    connect_args=_connect_args,
-    # pool_pre_ping sends a lightweight "SELECT 1" before handing a connection
-    # to the app, silently replacing stale ones.  Essential for Neon's free
-    # tier which scales to zero between requests.
-    pool_pre_ping=True,
+    **_engine_kwargs,
 )
+
 
 # ── Neon / PgBouncer prepared-statement fix ───────────────────────────────────
 # psycopg2 >= 2.9 caches server-side prepared statements by default

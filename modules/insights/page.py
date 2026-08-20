@@ -12,7 +12,7 @@ import pandas as pd
 import numpy as np
 
 from database.connection import get_session
-from database import raw_queries as rq
+from database import raw_queries as rq, cache
 from ml import preprocessing, train as ml_train
 from modules.settings import crud as settings_crud
 from ml.supervised_model import explain_coefficients, predict_next_week
@@ -46,7 +46,8 @@ def _render_cross_domain_tab(db, user_id: int):
         "They represent correlations in your behavior, not causal relationships."
     )
 
-    cross_df = pd.DataFrame(rq.get_cross_study_workout(db, user_id))
+    # Read from cache — these are read-only analytics queries.
+    cross_df = pd.DataFrame(cache.get_insights_cross_study_workout(user_id))
     col1, col2 = st.columns(2, gap="large")
 
     with col1:
@@ -65,7 +66,7 @@ def _render_cross_domain_tab(db, user_id: int):
             )
 
     with col2:
-        weekday_df = pd.DataFrame(rq.get_spending_by_weekday(db, user_id))
+        weekday_df = pd.DataFrame(cache.get_insights_spending_by_weekday(user_id))
         if not weekday_df.empty:
             fig = px.bar(
                 weekday_df, x="weekday_name", y="total_spent",

@@ -1,295 +1,177 @@
-# LifeOS 🧠
+# LifeOS
 
-[![Live Demo](https://img.shields.io/badge/🚀%20Live%20Demo-Streamlit%20Cloud-6366f1?style=for-the-badge&logo=streamlit&logoColor=white)](https://lifeos-ofnibiwxcpdemar5vwtswn.streamlit.app/)
-[![Tests](https://img.shields.io/badge/Tests-97%20Passed-22c55e?style=for-the-badge&logo=pytest&logoColor=white)](./tests/)
+[![Live Demo](https://img.shields.io/badge/Live%20Demo-Streamlit%20Cloud-6366f1?style=for-the-badge&logo=streamlit&logoColor=white)](https://lifeos-ofnibiwxcpdemar5vwtswn.streamlit.app/)
+[![Tests](https://img.shields.io/badge/Tests-109%20Passed-22c55e?style=for-the-badge&logo=pytest&logoColor=white)](./tests/)
 [![Python](https://img.shields.io/badge/Python-3.13-3b82f6?style=for-the-badge&logo=python&logoColor=white)](https://python.org)
-[![SQLite](https://img.shields.io/badge/SQLite-Raw%20SQL%20%2B%20ORM-f59e0b?style=for-the-badge&logo=sqlite&logoColor=white)](./database/)
+[![Database](https://img.shields.io/badge/Database-SQLite%20%2F%20PostgreSQL-f59e0b?style=for-the-badge&logo=postgresql&logoColor=white)](./database/)
 [![ML](https://img.shields.io/badge/ML-Scikit--Learn-ec4899?style=for-the-badge&logo=scikit-learn&logoColor=white)](./ml/)
 
-> 🔗 **[Live App →](https://lifeos-ofnibiwxcpdemar5vwtswn.streamlit.app/)** — Click "Explore Demo Data" or create an account to see everything in action instantly.
+> **[Open Live Application](https://lifeos-ofnibiwxcpdemar5vwtswn.streamlit.app/)** — Explore demo data or create a private account.
 
-A personal Study, Health, and Finance analytics platform, designed to be opened every day. Built to demonstrate real SQL, Python, machine learning, secure multi-user authentication, and production UI engineering.
+LifeOS is an all-in-one personal analytics and habit tracking platform integrating **Study, Health, and Personal Finance** into a cohesive system. Built with modern dark-mode aesthetics, raw SQL query optimizations, machine learning forecasting, and secure multi-user data isolation.
+
+---
 
 ## Overview
 
-LifeOS tracks three areas of daily life — study, health/fitness, and personal finance — in one SQLite-backed Streamlit application, with a unified Overview dashboard that pulls them together, secure multi-user authentication with bcrypt password hashing, and an Insights tab that applies real machine learning to your own logged data.
+Tracking daily habits across separate apps creates friction and obscures cross-domain insights. LifeOS solves this by consolidating daily habit tracking, health metrics, and expense management under one unified dashboard powered by machine learning and database-backed analytics.
 
-## Problem
-
-Tracking study time, meals/workouts, and expenses across separate apps makes it hard to see patterns or stay consistent. LifeOS puts all three in one place with meaningful analytics instead of just storing numbers.
-
-## Solution
-
-Three independent modules (Study, Health, Finance) that each feel like a complete mini-application, plus a combined Overview, an Insights tab with real SQL analytics and ML models, and secure user data isolation.
+---
 
 ## Key Features
 
-- **Secure Multi-User Authentication**: Production-grade authentication system powered by `bcrypt` password hashing (work factor 12), user data isolation (`user_id` context on all CRUD calls), and account management.
-- **Production UI/UX**: Neutral-first dark design system with an Inter font hierarchy, responsive grid alignment, and persistent sidebar navigation shell.
-- **Zero-Flicker Live Timer**: A study timer built using Streamlit native `@st.fragment(run_every="1s")` that updates live elapsed seconds without repainting the page or flashing UI elements.
-- **Onboarding choice**: Start Fresh (empty personal database) or Explore Demo Data (resettable sample data) — no fake data silently injected into a real account.
-- **Automatic health targets**: BMR (Mifflin-St Jeor), TDEE, calorie target, protein target, and BMI calculated from your profile. Precise weight input validation (20.0–300.0 kg, 0.1 step).
-- **Fast daily logging**: Quick-add food (with Recent Foods shortcut), one-tap water logging, a real study session timer that auto-saves on finish, and quick expense entry.
-- **Edit/delete everywhere**: Every logged record (food, workout, weight, study session, task, expense) can be edited or deleted.
-- **Personal Consistency Score**: A user-configurable weighted average across Study, Health, and Finance. Weights are adjustable in Settings.
-- **Cross-domain insights**: Real SQL patterns ("your study time is 18% higher than last week") generated from stored data.
-- **Real ML**: Supervised Logistic Regression predicting weekly goal achievement and unsupervised KMeans clustering days into interpretable behavior types.
-- **CSV export**: Dedicated export engine for Study, Health, Finance, and combined datasets.
+- **Personal Consistency Score**: A user-weighted formula dynamically combining Study, Health, and Finance consistency into a daily performance index.
+- **Secure Multi-User Architecture**: Production authentication powered by `bcrypt` (work factor 12) with user data isolation across all CRUD queries and database models.
+- **Modern Dark UI Design**: Glassmorphic dark design system with Plus Jakarta Sans typography, refined metric cards, and responsive sidebar navigation.
+- **High-Performance Query Caching**: `@st.cache_data` query-level caching layer (`database/cache.py`) with targeted invalidations.
+- **Study Module**:
+  - Live study session timer using Streamlit fragments (`@st.fragment(run_every="1s")`) without page flicker.
+  - Priority task manager with inline completion and status indicators.
+  - Streak tracking with SQL gaps-and-islands queries.
+- **Health Module**:
+  - Dynamic calorie and macronutrient targets based on Mifflin-St Jeor BMR and TDEE formulas.
+  - Fast food and water logging with recent food shortcuts.
+  - Rolling weight trends and weekly workout consistency tracking.
+- **Finance Module**:
+  - Monthly budget tracking with progress indicators and status badges (On Track, Near Limit, Over Budget).
+  - Categorized expense logging with month-over-month comparisons.
+  - Weekly and weekday spending distribution analytics.
+- **Machine Learning & Insights**:
+  - **Supervised Forecasting**: Logistic Regression model predicting weekly study goal achievement with chronological data splitting and target leakage prevention.
+  - **Unsupervised Clustering**: KMeans clustering identifying behavioral day types based on user activity.
+- **Data Export & Management**: CSV data export for all modules and demo data seeding/resetting.
+
+---
 
 ## Architecture
 
 ```
 lifeos/
-├── app.py                   # Entry point: onboarding gate + navigation
-├── config.py                 # Paths, constants, default weights/goals
+├── app.py                      # Application shell, authentication, and routing
+├── config.py                    # Environment settings, DATABASE_URL resolution
 ├── database/
-│   ├── models.py              # SQLAlchemy models (indexed, Numeric money, constraints)
-│   ├── connection.py          # Engine/session setup
-│   ├── init_db.py             # Table creation, column migration, demo data seeding
-│   └── raw_queries.py         # Hand-written SQL: CTEs, window functions, JOINs, HAVING
+│   ├── models.py                # SQLAlchemy ORM models (indexed on user_id, Numeric currency)
+│   ├── connection.py            # SQLite & PostgreSQL database session factory
+│   ├── cache.py                 # Query-level caching & targeted invalidation
+│   ├── init_db.py               # Table migrations & demo data seeding
+│   └── raw_queries.py           # CTEs, window functions, and SQL aggregations
 ├── modules/
-│   ├── study/                  # Tasks, sessions, timer, streaks, subjects
-│   ├── health/                  # Nutrition, water, workouts, weight, targets
-│   ├── finance/                  # Expenses, categories, budgets, insights
-│   ├── dashboard/                 # Overview aggregation + Personal Consistency Score
-│   ├── insights/                   # Cross-domain analytics + ML UI
-│   └── settings/                    # Onboarding, profile, score weights, export, reset
+│   ├── dashboard/               # Unified overview and Consistency Score
+│   ├── study/                   # Study timer, task list, streak analytics
+│   ├── health/                  # Nutrition, workouts, body metrics, TDEE calculator
+│   ├── finance/                 # Expense tracking, budget management, category insights
+│   ├── insights/                # Cross-domain correlations and ML forecasting
+│   └── settings/                # Profile setup, weight adjustment, CSV export, demo reset
 ├── ml/
-│   ├── preprocessing.py         # Daily/weekly feature engineering, leakage-safe
-│   ├── supervised_model.py       # Logistic Regression, chronological split
-│   ├── unsupervised_model.py      # KMeans, baseline-relative cluster labeling
-│   ├── train.py                    # Training workflow + DB metadata persistence
-│   ├── evaluate.py                  # Metric/summary formatting
-│   └── models/                       # Saved model artifacts (gitignored)
+│   ├── preprocessing.py         # Leakage-safe feature engineering & chronological splitting
+│   ├── supervised_model.py      # Logistic Regression goal predictor
+│   ├── unsupervised_model.py    # KMeans behavioral day clustering
+│   ├── train.py                 # Training pipeline & metadata persistence
+│   └── evaluate.py              # Confusion matrix and performance evaluation
 ├── utils/
-│   ├── health_calc.py            # BMR/TDEE/BMI/calorie-target formulas
-│   ├── validation.py              # Shared input validation
-│   ├── charts.py                   # Plotly chart builders
-│   ├── export.py                    # CSV export
-│   ├── date_helpers.py               # Date/week utilities
-│   ├── auth.py                       # Bcrypt password hashing & session authentication
-│   └── ui_components.py               # Shared CSS, dark design system, progress widgets
-└── tests/                        # 97 tests across all modules (auth, isolation, analytics, ML)
+│   ├── auth.py                  # Bcrypt password hashing & session management
+│   ├── charts.py                # Plotly dark theme chart builders
+│   ├── date_helpers.py          # Date parsing, week calculations, greeting helper
+│   ├── export.py                # CSV export generator
+│   ├── health_calc.py           # BMR, TDEE, BMI, and macro calculation formulas
+│   ├── ui_components.py         # Custom CSS stylesheet and reusable UI components
+│   └── validation.py            # Input validation and boundary checks
+└── tests/                       # 109 automated tests (auth, SQL, ML, analytics, scoring)
 ```
+
+---
 
 ## Tech Stack
 
-Python · Streamlit · SQLite · SQLAlchemy · raw SQL · Pandas · NumPy · Plotly ·
-scikit-learn · Pytest · Git/GitHub
+- **Frontend & App Framework**: Streamlit (with custom CSS design system)
+- **Backend & Data**: Python 3.13, Pandas, NumPy, Plotly
+- **Database Layer**: SQLAlchemy, SQLite (local), PostgreSQL (production/Supabase/Neon), Raw SQL (CTEs, window functions)
+- **Machine Learning**: Scikit-Learn (Logistic Regression, KMeans, StandardScaler)
+- **Authentication & Security**: Bcrypt password hashing, session state token guards
+- **Testing**: Pytest (109 unit & integration tests)
 
-No FastAPI, Docker, React, or additional databases — kept deliberately to this
-stack, since the goal is depth within it, not technology count.
+---
 
-## Database Design
+## Installation & Local Setup
 
-- Every table is indexed on `user_id`, on date columns, and on `(user_id, date)`
-  composites, since nearly every query filters on both.
-- Money fields (`Expense.amount`, `Budget.limit_amount`, `UserProfile.monthly_budget`)
-  use `Numeric(10, 2)`, not `Float`, to avoid floating-point rounding errors in
-  financial totals.
-- `CheckConstraint`s enforce basic sanity (amounts/durations can't be negative)
-  at the DB level as a second line of defense behind `utils/validation.py`.
-- Calculated health values (BMR, TDEE, targets, BMI) are **never stored** — only
-  the raw profile inputs are. Targets are recomputed on every read, so they can
-  never drift out of sync with the profile.
-
-## SQL Highlights
-
-All in `database/raw_queries.py`, actually used by the app (not decorative):
-
-- **Streak calculation** — a "gaps and islands" CTE using `ROW_NUMBER()` and
-  date-subtraction to group consecutive study days into islands.
-- **True calendar-day rolling windows** — weight trend, weekly study minutes,
-  and rolling spend all use a correlated subquery with `BETWEEN date-6 AND date`,
-  *not* `ROWS BETWEEN 6 PRECEDING`. The row-based version would silently produce
-  wrong "weekly" totals whenever a day was skipped (7 rows ≠ 7 calendar days
-  once there are gaps) — this was caught and fixed during development.
-- **`HAVING`** — categories over budget are found with `GROUP BY ... HAVING
-  SUM(amount) > limit`, since the filter depends on an aggregate.
-- **Self-joins** — month-over-month category comparison joins `this_month` and
-  `last_month` CTEs on category.
-- **`LEFT JOIN`** — subject/category breakdowns include zero-activity rows
-  (e.g. a subject with no sessions still shows 0 minutes, not a missing row).
-
-## Analytics
-
-Each module (Study/Health/Finance) exposes 7-day/30-day averages, consistency
-percentages, and trend charts, all built on the raw SQL above via Pandas.
-Finance additionally generates plain-language insights (month-over-month
-category change, weekday spending patterns, largest expenses) — only surfaced
-when the underlying data actually supports the claim (e.g. a month-over-month
-comparison is skipped entirely if last month has no data).
-
-## Machine Learning
-
-### Supervised Learning
-- **Problem**: predict whether the user will hit their weekly study goal.
-- **Features**: the *previous* week's study minutes, average calories, workout
-  minutes, average sleep, total expenses, and task completion rate.
-- **Target**: current week's `goal_hit` (1/0), based on the user's own
-  `daily_study_goal_minutes × 7`.
-- **Leakage avoidance**: features are shifted by exactly one week (`shift(1)`)
-  before being paired with the label — a week's own data is never used to
-  predict its own outcome. Verified by `tests/test_ml_preprocessing.py::test_weekly_features_no_target_leakage`.
-- **Model**: Logistic Regression (scikit-learn), `StandardScaler`-normalized.
-- **Data splitting**: **chronological**, not random — the earliest weeks are
-  always training data, the most recent weeks are always the test set. A
-  random split would let the model "test" on the past using information from
-  the future, which doesn't reflect the real forecasting task. Verified by
-  `tests/test_ml_models.py::test_chronological_split_test_set_is_always_the_most_recent`.
-- **Evaluation**: accuracy, precision, recall, F1, and a full confusion matrix
-  — only computed and shown once at least `MIN_WEEKS_FOR_SUPERVISED_EVAL` (6)
-  weeks of history exist. Below that threshold, the app explicitly states
-  "not enough historical data" rather than reporting a number computed on 1-2
-  test points.
-- **Known edge case, handled**: if all available weeks share the same label
-  (goal always hit or always missed), scikit-learn's `LogisticRegression`
-  cannot fit at all (it requires 2 classes). This is detected before fitting
-  and reported as "not enough label variation yet" rather than crashing —
-  caught during development and covered by
-  `tests/test_ml_models.py::test_supervised_model_single_class_does_not_crash`.
-
-### Unsupervised Learning
-- **Problem**: identify recurring "day types" from combined study, health, and
-  finance activity.
-- **Features**: study minutes, calories, workout minutes, sleep hours, and
-  expense amount, per day.
-- **Algorithm**: KMeans (scikit-learn), `k` chosen automatically by trying
-  `k=2..5` and picking the best silhouette score.
-- **Evaluation**: silhouette score, always shown alongside results.
-- **Interpretability**: cluster labels (e.g. "High Study & Active") are
-  generated by comparing each cluster's mean feature values against the
-  **user's own** overall mean/standard deviation (a z-score-style comparison)
-  — not fixed universal thresholds. This means "high study" is meaningful
-  whether the user studies 30 minutes/day or 4 hours/day on average.
-
-### Training Architecture
-Database → feature engineering (`ml/preprocessing.py`) → training
-(`ml/train.py`) → evaluation → model + metadata saved → loaded for display.
-Training only happens when the user clicks **Train Models** on the Insights
-page — the app does not retrain on every page load. Each training run also
-writes a row to `MLModelMetadata` (algorithm, sample count, feature names,
-data period, metrics) so "last trained on X" can be shown without re-running
-anything.
-
-## Installation
-
+### 1. Clone the repository
 ```bash
-git clone <your-repo-url>
-cd lifeos
+git clone https://github.com/DeepakChouhan18/LifeOS.git
+cd LifeOS
+```
+
+### 2. Install dependencies
+```bash
 pip install -r requirements.txt
 ```
 
-## Running Locally
-
+### 3. Run the application
 ```bash
 streamlit run app.py
 ```
 
-On first launch, you'll be asked to **Start Fresh** or **Explore Demo Data**.
-No database file or fake data is created until you choose.
+Open [http://localhost:8501](http://localhost:8501) in your browser.
 
-## Database Initialization
+---
 
-Tables are created automatically on first run (`database/init_db.ensure_tables()`,
-called from `app.py`). To manually create tables and load demo data from the
-command line instead:
+## Database Configuration
 
-```bash
-python database/init_db.py
+LifeOS automatically resolves database connections in the following priority order:
+
+1. `DATABASE_URL` environment variable.
+2. `st.secrets["DATABASE_URL"]` (for Streamlit Community Cloud).
+3. Local SQLite database fallback (`data/lifeos.db`).
+
+### PostgreSQL Deployment (Recommended for Cloud Hosting)
+For production deployment with persistent multi-user data:
+1. Provision a PostgreSQL instance (e.g., [Supabase](https://supabase.com), [Neon](https://neon.tech), or [Railway](https://railway.app)).
+2. In Streamlit Community Cloud settings under **Secrets**, configure:
+```toml
+DATABASE_URL = "postgresql://user:password@host:5432/dbname"
 ```
 
-## Demo Data
+---
 
-Demo data (profile + ~5 weeks of study/health/finance history) is clearly
-flagged (`UserProfile.is_demo = True`) and shown with a banner in the app.
-Reset it any time from **Settings → Data Management → Reset Demo Data**, or
-delete it entirely to switch to your own real data.
+## Machine Learning Pipeline
 
-## Training Models
+### Supervised Learning
+- **Task**: Forecast whether the user will achieve their weekly study goal.
+- **Features**: Lagged (t-1) study minutes, average calories, workout duration, sleep hours, expenses, and task completion rate.
+- **Split**: Strict **chronological split** (past data trains, future data tests) to prevent lookahead bias.
+- **Metrics**: Accuracy, Precision, Recall, F1 Score, Confusion Matrix.
 
-From the app: **Insights → Machine Learning → Train Models**.
+### Unsupervised Clustering
+- **Task**: Discover behavioral patterns across lifestyle dimensions.
+- **Algorithm**: KMeans with automatic $k$ selection ($k \in [2, 5]$) optimizing silhouette score.
+- **Interpretability**: Cluster labels generated relative to the user's personal baseline standard deviations.
 
-From the command line:
+To retrain models from CLI:
 ```bash
 python ml/train.py
 ```
 
-## Testing
+---
 
+## Running Tests
+
+Run the complete test suite:
 ```bash
 pytest
 ```
 
-97 tests covering: secure bcrypt authentication & user data isolation, BMR/TDEE/BMI/calorie-target
-calculations (including the no-universal-1200-floor requirement), study streaks and completion, finance
-budgets and category totals, raw SQL (JOINs, CTEs, `HAVING`, calendar-based
-rolling windows, missing-date behavior), ML preprocessing (no NaNs, no target
-leakage), ML models (chronological splitting, insufficient-data handling,
-single-class training safety), input validation, and the Personal Consistency
-Score formula.
-
-## Deployment
-
-**Live on Streamlit Community Cloud:**
-🔗 **[https://lifeos-ofnibiwxcpdemar5vwtswn.streamlit.app/](https://lifeos-ofnibiwxcpdemar5vwtswn.streamlit.app/)**
-
-Click **"Explore Demo Data"** on the onboarding screen to see all features instantly with ~5 weeks of sample data.
-
-To run locally:
-
-```bash
-git clone https://github.com/DeepakChouhan18/LifeOS.git
-cd LifeOS
-pip install -r requirements.txt
-streamlit run app.py
+```text
+======================= 109 passed, 14 warnings in 6.20s =======================
 ```
 
-The app works from a clean environment with no local paths or personal data baked in —
-`data/lifeos.db` and `ml/models/*.pkl` are gitignored, and the onboarding flow means a fresh
-deployment starts empty (or with demo data, by the visitor's own choice).
+The test suite validates:
+- Password hashing security & multi-tenant user data isolation
+- SQL correctness (CTEs, calendar-day rolling averages, gap-and-island streaks)
+- BMR/TDEE and macro formulas
+- ML feature lag integrity & absence of target leakage
+- Personal Consistency Score formula & weight boundaries
 
-## Limitations
+---
 
-- **⚠️ Ephemeral storage on Streamlit Community Cloud**: Streamlit Community Cloud runs
-  the app in a container whose filesystem is wiped on every restart, redeploy, or sleep
-  cycle. If `DATABASE_URL` is not set, the app falls back to a local SQLite file
-  (`data/lifeos.db`) that lives on that ephemeral disk — **all user accounts and data are
-  permanently lost on every restart**. To avoid this you must point the app at a
-  persistent PostgreSQL database before going live:
-  1. Provision a free PostgreSQL database on [Supabase](https://supabase.com),
-     [Neon](https://neon.tech), or [Railway](https://railway.app).
-  2. Copy the connection string (it looks like
-     `postgresql://user:pass@host:5432/dbname`).
-  3. In Streamlit Community Cloud → your app → **Settings → Secrets**, add:
-     ```toml
-     DATABASE_URL = "postgresql://user:pass@host:5432/dbname"
-     ```
-  4. Redeploy — `config.py` will pick up `st.secrets["DATABASE_URL"]`
-     automatically (env var > st.secrets > SQLite fallback).
+## License
 
-- **Concurrency / SQLite storage**: Uses SQLite as the embedded database engine; while
-  every table is indexed on `user_id` for strict multi-user data isolation, high
-  write-concurrency multi-instance setups should migrate to PostgreSQL.
-- **ML accuracy on small datasets**: with only a few weeks of real history,
-  the supervised model will usually report "not enough data" rather than a
-  metric — this is intentional (see Machine Learning section above), but it
-  means the ML tab won't show impressive numbers until you've used the app
-  for 6+ weeks.
-- **7700 kcal/kg rule of thumb**: the optional adaptive maintenance estimate
-  (Health → Analytics) uses the commonly cited but approximate energy content
-  of body fat; it's labeled as an estimate, not a precise measurement.
-- **No backup/restore beyond CSV export**: data can be exported but not
-  re-imported from a backup file.
-- **Not medical or financial advice**: calorie/BMI/budget outputs are
-  informational, not clinical or professional guidance — the app says so
-  directly where relevant (e.g. the aggressive-deficit warning).
-
-## Future Improvements
-
-- Adaptive maintenance estimate could incorporate more robust trend-fitting
-  (e.g. linear regression over the weight series) instead of a two-point
-  endpoint comparison.
-- A study session heatmap/calendar view.
-- Category-level budget rollover between months.
-- OAuth2 / Social SSO login options (e.g. Google, GitHub).
+MIT License. Feel free to use, modify, and build upon this project.

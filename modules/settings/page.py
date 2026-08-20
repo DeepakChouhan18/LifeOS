@@ -12,7 +12,7 @@ import streamlit as st
 from datetime import date
 
 from database.connection import get_session
-from database import init_db
+from database import init_db, cache
 from modules.settings import crud as settings_crud
 from utils import health_calc, export, validation, ui_components, auth as auth_utils
 
@@ -241,6 +241,7 @@ def _render_profile_form(db, user_id: int, is_demo: bool = False, on_first_launc
                         monthly_budget if monthly_budget > 0 else None,
                         is_demo=is_demo,
                     )
+                    cache.clear_after_profile_save()
                     if on_first_launch:
                         init_db.ensure_default_categories_and_subjects(db, user_id)
                         st.session_state.pop("onboarding_choice", None)
@@ -373,6 +374,7 @@ def _render_score_weights(db, user_id: int, profile):
         if st.button("Save Weights", disabled=not is_valid, type="primary"):
             try:
                 settings_crud.update_score_weights(db, user_id, study_w, health_w, finance_w)
+                cache.clear_after_score_weights_save()
                 st.success("Weights saved successfully.")
                 st.rerun()
             except ValueError as e:
@@ -435,6 +437,7 @@ def _render_data_and_privacy(db, user_id: int, profile):
         st.caption("Your account is currently using simulated demo data.")
         if st.button("Reset & Reload Demo Data", use_container_width=True):
             init_db.reset_demo_data(db, user_id)
+            cache.clear_all_module_caches()
             st.success("Demo data reloaded.")
             st.rerun()
 
@@ -442,6 +445,7 @@ def _render_data_and_privacy(db, user_id: int, profile):
         st.caption("Wipe all demo data and start entering your own records.")
         if st.button("Delete Demo Data & Start Fresh", type="secondary", use_container_width=True):
             settings_crud.delete_all_user_data(db, user_id)
+            cache.clear_all_module_caches()
             st.success("Demo data cleared. Return to Dashboard to begin.")
             st.rerun()
     else:
@@ -453,5 +457,6 @@ def _render_data_and_privacy(db, user_id: int, profile):
         confirm = st.checkbox("I understand this action is permanent and cannot be undone.")
         if st.button("Reset Logged Activity", disabled=not confirm, type="secondary", use_container_width=True):
             settings_crud.reset_logged_data_keep_profile(db, user_id)
+            cache.clear_all_module_caches()
             st.success("Activity logs cleared. Profile preserved.")
             st.rerun()

@@ -15,6 +15,7 @@ import streamlit as st
 from datetime import date, datetime, timezone
 
 from database.connection import get_session
+from database import cache
 from modules.study import crud, analytics
 from utils.charts import subject_minutes_bar, rolling_weekly_line
 from utils import ui_components, date_helpers
@@ -26,6 +27,7 @@ def render(user_id: int):
         "Track sessions, manage tasks, monitor streaks, and analyze your progress.",
     )
 
+    # db session is kept open for write operations across all tabs.
     db = get_session()
     try:
         tab_today, tab_tasks, tab_sessions, tab_subjects, tab_analytics = st.tabs([
@@ -45,7 +47,7 @@ def render(user_id: int):
             _render_subjects_tab(db, user_id)
 
         with tab_analytics:
-            _render_analytics_tab(db, user_id)
+            _render_analytics_tab(user_id)
 
     finally:
         db.close()
@@ -56,8 +58,9 @@ def render(user_id: int):
 # ==========================================================================
 
 def _render_today_tab(db, user_id: int):
-    summary = analytics.get_today_summary(db, user_id)
-    streaks = analytics.get_streak_summary(db, user_id)
+    # Read-only data from cache
+    summary = cache.get_study_today_summary(user_id)
+    streaks = cache.get_study_streak_summary(user_id)
 
     # ---- Metric cards ----
     c1, c2, c3, c4 = st.columns(4)
@@ -102,7 +105,7 @@ def _render_today_tab(db, user_id: int):
     st.markdown("<hr style='border-color:#1a2540;margin:1.25rem 0;'>", unsafe_allow_html=True)
 
     # ---- Study timer (prominent) ----
-    subjects = crud.list_subjects(db, user_id)
+    subjects = cache.get_study_subjects(user_id)  # list of plain dicts
     _render_study_timer(db, subjects, user_id)
 
     st.markdown("<hr style='border-color:#1a2540;margin:1.25rem 0;'>", unsafe_allow_html=True)
@@ -111,7 +114,7 @@ def _render_today_tab(db, user_id: int):
 
     with col1:
         ui_components.section_header("QUICK LOG SESSION")
-        subject_names = [s.name for s in subjects]
+        subject_names = [s["name"] for s in subjects]
 
         if not subject_names:
             ui_components.info_banner(
@@ -126,14 +129,15 @@ def _render_today_tab(db, user_id: int):
                 submitted = st.form_submit_button("+ Log Session", type="primary", use_container_width=True)
 
                 if submitted:
-                    subj = next((s for s in subjects if s.name == subj_name), None)
-                    crud.log_session(db, user_id, subj.id, int(minutes), date.today(), topic=topic)
+                    subj = next((s for s in subjects if s["name"] == subj_name), None)
+                    crud.log_session(db, user_id, subj["id"], int(minutes), date.today(), topic=topic)
+                    cache.clear_after_study_session_write()
                     st.success(f"Logged {minutes} min of {subj_name}.")
                     st.rerun()
 
     with col2:
         ui_components.section_header("PENDING TASKS")
-        pending_tasks = [t for t in crud.list_tasks(db, user_id, include_completed=False)]
+        pending_tasks = cache.get_study_tasks(user_id, include_completed=False)
         if not pending_tasks:
             ui_components.empty_state(
                 "All clear — no pending tasks",
@@ -143,30 +147,31 @@ def _render_today_tab(db, user_id: int):
         else:
             for task in pending_tasks[:6]:
                 today_d = date.today()
-                is_overdue = task.due_date and task.due_date < today_d
+                is_overdue = task["due_date"] and task["due_date"] < today_d
 
-                if task.priority == "high":
+                if task["priority"] == "high":
                     accent = "#ef4444"
-                elif task.priority == "medium":
+                elif task["priority"] == "medium":
                     accent = "#f59e0b"
                 else:
                     accent = "#22c55e"
 
                 t_col1, t_col2 = st.columns([5, 1])
                 with t_col1:
-                    subj_name_str = task.subject.name if task.subject else "General"
+                    subj_name_str = task["subject_name"] or "General"
                     overdue_badge = ui_components.status_badge("Overdue", "overdue") if is_overdue else ""
                     st.markdown(
                         f'<div style="padding:0.55rem 0.75rem;background:#111927;border-radius:8px;'
                         f'margin-bottom:0.35rem;border:1px solid #1e293b;border-left:2px solid {accent};">'
-                        f'<div style="font-size:0.875rem;font-weight:500;color:#e2e8f0;">{task.title}</div>'
+                        f'<div style="font-size:0.875rem;font-weight:500;color:#e2e8f0;">{task["title"]}</div>'
                         f'<div style="font-size:0.75rem;color:#64748b;margin-top:0.1rem;">'
                         f'{subj_name_str} {overdue_badge}</div></div>',
                         unsafe_allow_html=True,
                     )
                 with t_col2:
-                    if st.button("Done", key=f"quick_complete_{task.id}", use_container_width=True):
-                        crud.complete_task(db, task.id)
+                    if st.button("Done", key=f"quick_complete_{task['id']}", use_container_width=True):
+                        crud.complete_task(db, task["id"])
+                        cache.clear_after_study_task_write()
                         st.rerun()
 
 
@@ -191,11 +196,12 @@ def _render_active_timer(db, subjects, user_id: int):
     with col_controls:
         st.markdown("<div style='margin-top:1rem;'></div>", unsafe_allow_html=True)
         if st.button("Finish & Save", type="primary", use_container_width=True, key="timer_finish"):
-            subj = next((s for s in subjects if s.name == st.session_state.timer_subject), None)
+            subj = next((s for s in subjects if s["name"] == st.session_state.timer_subject), None)
             duration = max(1, round(elapsed_sec / 60.0))
             if subj:
-                crud.log_session(db, user_id, subj.id, duration, date.today(), topic="Timed session")
-                st.success(f"Saved {duration} min session for {subj.name}.")
+                crud.log_session(db, user_id, subj["id"], duration, date.today(), topic="Timed session")
+                st.success(f"Saved {duration} min session for {subj['name']}.")
+            cache.clear_after_study_session_write()
             st.session_state.timer_start = None
             st.session_state.timer_subject = None
             st.rerun()
@@ -211,7 +217,7 @@ def _render_study_timer(db, subjects, user_id: int):
     Timer controller. When idle, does NOT use any background interval or polling,
     ensuring zero lag across the app.
     """
-    subject_names = [s.name for s in subjects]
+    subject_names = [s["name"] for s in subjects]
 
     if "timer_start" not in st.session_state:
         st.session_state.timer_start = None
@@ -246,8 +252,8 @@ def _render_tasks_tab(db, user_id: int):
 
     with col_add:
         ui_components.section_header("ADD TASK")
-        subjects = crud.list_subjects(db, user_id)
-        subject_names = [s.name for s in subjects]
+        subjects = cache.get_study_subjects(user_id)
+        subject_names = [s["name"] for s in subjects]
 
         with st.form("add_task_form", clear_on_submit=True):
             title = st.text_input("Task Title", placeholder="e.g. Complete DSA Chapter 5")
@@ -261,15 +267,16 @@ def _render_tasks_tab(db, user_id: int):
             submitted = st.form_submit_button("+ Add Task", type="primary", use_container_width=True)
 
             if submitted and title:
-                subject = next((s for s in subjects if s.name == subject_name), None) if subject_name else None
-                crud.add_task(db, user_id, title, subject.id if subject else None, due, priority, topic)
+                subject = next((s for s in subjects if s["name"] == subject_name), None) if subject_name else None
+                crud.add_task(db, user_id, title, subject["id"] if subject else None, due, priority, topic)
+                cache.clear_after_study_task_write()
                 st.success(f"Added: {title}")
                 st.rerun()
             elif submitted and not title:
                 st.error("Please enter a task title.")
 
     with col_list:
-        tasks = crud.list_tasks(db, user_id, include_completed=True)
+        tasks = cache.get_study_tasks(user_id, include_completed=True)
         if not tasks:
             ui_components.empty_state(
                 "No tasks yet",
@@ -278,8 +285,8 @@ def _render_tasks_tab(db, user_id: int):
             )
             return
 
-        pending = [t for t in tasks if not t.is_completed]
-        completed = [t for t in tasks if t.is_completed]
+        pending = [t for t in tasks if not t["is_completed"]]
+        completed = [t for t in tasks if t["is_completed"]]
 
         if pending:
             ui_components.section_header(f"PENDING ({len(pending)})")
@@ -294,13 +301,13 @@ def _render_tasks_tab(db, user_id: int):
 
 def _render_task_row(db, task):
     today_d = date.today()
-    is_overdue = (not task.is_completed) and task.due_date and task.due_date < today_d
+    is_overdue = (not task["is_completed"]) and task["due_date"] and task["due_date"] < today_d
 
-    if task.priority == "high":
+    if task["priority"] == "high":
         accent = "#ef4444"
         prio_label = "High"
         prio_variant = "danger"
-    elif task.priority == "medium":
+    elif task["priority"] == "medium":
         accent = "#f59e0b"
         prio_label = "Medium"
         prio_variant = "warning"
@@ -309,37 +316,40 @@ def _render_task_row(db, task):
         prio_label = "Low"
         prio_variant = "success"
 
-    icon = "✓" if task.is_completed else ("!" if is_overdue else "○")
-    icon_color = "#22c55e" if task.is_completed else ("#ef4444" if is_overdue else "#475569")
-    subj_str = task.subject.name if task.subject else "General"
-    due_str = f"Due {date_helpers.format_date(task.due_date)}" if task.due_date else ""
-    text_color = "#64748b" if task.is_completed else "#e2e8f0"
-    text_style = "text-decoration:line-through;" if task.is_completed else ""
+    icon = "✓" if task["is_completed"] else ("!" if is_overdue else "○")
+    icon_color = "#22c55e" if task["is_completed"] else ("#ef4444" if is_overdue else "#475569")
+    subj_str = task["subject_name"] or "General"
+    due_str = f"Due {date_helpers.format_date(task['due_date'])}" if task["due_date"] else ""
+    text_color = "#64748b" if task["is_completed"] else "#e2e8f0"
+    text_style = "text-decoration:line-through;" if task["is_completed"] else ""
 
-    with st.expander(f"{task.title}", expanded=False):
+    with st.expander(f"{task['title']}", expanded=False):
         st.markdown(
             f'<div style="font-size:0.78rem;color:#64748b;margin-bottom:0.5rem;">'
             f'{subj_str}'
             + (f' · {due_str}' if due_str else '')
             + f' · {ui_components.status_badge(prio_label, prio_variant)}'
             + (f' {ui_components.status_badge("Overdue", "overdue")}' if is_overdue else '')
-            + (f'<br>Topic: {task.topic}' if task.topic else '')
+            + (f'<br>Topic: {task["topic"]}' if task["topic"] else '')
             + '</div>',
             unsafe_allow_html=True,
         )
         col_btn1, col_btn2, _ = st.columns([1, 1, 3])
         with col_btn1:
-            if task.is_completed:
-                if st.button("Undo", key=f"uncomp_{task.id}", use_container_width=True):
-                    crud.uncomplete_task(db, task.id)
+            if task["is_completed"]:
+                if st.button("Undo", key=f"uncomp_{task['id']}", use_container_width=True):
+                    crud.uncomplete_task(db, task["id"])
+                    cache.clear_after_study_task_write()
                     st.rerun()
             else:
-                if st.button("Complete", key=f"comp_{task.id}", type="primary", use_container_width=True):
-                    crud.complete_task(db, task.id)
+                if st.button("Complete", key=f"comp_{task['id']}", type="primary", use_container_width=True):
+                    crud.complete_task(db, task["id"])
+                    cache.clear_after_study_task_write()
                     st.rerun()
         with col_btn2:
-            if st.button("Delete", key=f"del_task_{task.id}", use_container_width=True):
-                crud.delete_task(db, task.id)
+            if st.button("Delete", key=f"del_task_{task['id']}", use_container_width=True):
+                crud.delete_task(db, task["id"])
+                cache.clear_after_study_task_write()
                 st.rerun()
 
 
@@ -352,8 +362,8 @@ def _render_sessions_tab(db, user_id: int):
 
     with col_log:
         ui_components.section_header("LOG SESSION")
-        subjects = crud.list_subjects(db, user_id)
-        subject_names = [s.name for s in subjects]
+        subjects = cache.get_study_subjects(user_id)
+        subject_names = [s["name"] for s in subjects]
 
         with st.form("log_session_full_form", clear_on_submit=True):
             subject_name = st.selectbox("Subject", subject_names) if subject_names else None
@@ -364,8 +374,9 @@ def _render_sessions_tab(db, user_id: int):
             submitted = st.form_submit_button("Save Session", type="primary", use_container_width=True)
 
             if submitted and subject_name:
-                subject = next((s for s in subjects if s.name == subject_name), None)
-                crud.log_session(db, user_id, subject.id, int(minutes), session_date, topic, notes)
+                subject = next((s for s in subjects if s["name"] == subject_name), None)
+                crud.log_session(db, user_id, subject["id"], int(minutes), session_date, topic, notes)
+                cache.clear_after_study_session_write()
                 st.success("Session logged.")
                 st.rerun()
             elif submitted and not subject_name:
@@ -373,7 +384,7 @@ def _render_sessions_tab(db, user_id: int):
 
     with col_hist:
         ui_components.section_header("HISTORY")
-        sessions = crud.list_sessions(db, user_id, limit=50)
+        sessions = cache.get_study_sessions(user_id, limit=50)
         if not sessions:
             ui_components.empty_state(
                 "No study sessions yet",
@@ -383,20 +394,21 @@ def _render_sessions_tab(db, user_id: int):
             return
 
         for s in sessions:
-            date_label = date_helpers.format_date(s.session_date)
-            subj_name = s.subject.name if s.subject else "General"
-            note_str = s.topic or s.notes or ""
+            date_label = date_helpers.format_date(s["session_date"])
+            subj_name = s["subject_name"]
+            note_str = s["topic"] or s["notes"] or ""
 
             col_d, col_s, col_n, col_del = st.columns([1.5, 2, 2, 0.5])
             col_d.markdown(f'<span style="font-size:0.8rem;color:#64748b;">{date_label}</span>', unsafe_allow_html=True)
             col_s.markdown(
                 f'<span style="font-weight:600;font-size:0.875rem;color:#e2e8f0;">{subj_name}</span> '
-                f'<span style="font-size:0.8rem;color:#64748b;">{s.duration_minutes} min</span>',
+                f'<span style="font-size:0.8rem;color:#64748b;">{s["duration_minutes"]} min</span>',
                 unsafe_allow_html=True,
             )
             col_n.markdown(f'<span style="font-size:0.78rem;color:#64748b;">{note_str}</span>', unsafe_allow_html=True)
-            if col_del.button("✕", key=f"del_sess_{s.id}"):
-                crud.delete_session(db, s.id)
+            if col_del.button("✕", key=f"del_sess_{s['id']}"):
+                crud.delete_session(db, s["id"])
+                cache.clear_after_study_session_write()
                 st.rerun()
             st.markdown('<hr style="border-color:#1a2540;margin:0.25rem 0;">', unsafe_allow_html=True)
 
@@ -417,6 +429,7 @@ def _render_subjects_tab(db, user_id: int):
 
             if submitted and name:
                 crud.add_subject(db, user_id, name, color)
+                cache.clear_after_study_subject_write()
                 st.success(f"Added: {name}")
                 st.rerun()
             elif submitted:
@@ -424,7 +437,7 @@ def _render_subjects_tab(db, user_id: int):
 
     with col_list:
         ui_components.section_header("YOUR SUBJECTS")
-        subjects = crud.list_subjects(db, user_id)
+        subjects = cache.get_study_subjects(user_id)
         if not subjects:
             ui_components.empty_state(
                 "No subjects yet",
@@ -436,13 +449,14 @@ def _render_subjects_tab(db, user_id: int):
             sc1, sc2 = st.columns([5, 1])
             sc1.markdown(
                 f'<div style="padding:0.6rem 0.9rem;background:#111927;border-radius:8px;'
-                f'margin-bottom:0.35rem;border:1px solid #1e293b;border-left:3px solid {s.color};">'
-                f'<span style="font-weight:600;color:#e2e8f0;">{s.name}</span>'
+                f'margin-bottom:0.35rem;border:1px solid #1e293b;border-left:3px solid {s["color"]};">'
+                f'<span style="font-weight:600;color:#e2e8f0;">{s["name"]}</span>'
                 f'</div>',
                 unsafe_allow_html=True,
             )
-            if sc2.button("✕", key=f"del_subj_{s.id}", use_container_width=True):
-                crud.delete_subject(db, s.id)
+            if sc2.button("✕", key=f"del_subj_{s['id']}", use_container_width=True):
+                crud.delete_subject(db, s["id"])
+                cache.clear_after_study_subject_write()
                 st.rerun()
 
 
@@ -450,8 +464,9 @@ def _render_subjects_tab(db, user_id: int):
 # ANALYTICS TAB
 # ==========================================================================
 
-def _render_analytics_tab(db, user_id: int):
-    summary = analytics.get_full_summary(db, user_id)
+def _render_analytics_tab(user_id: int):
+    # Analytics is read-only — all data from cache, no db needed.
+    summary = cache.get_study_full_summary(user_id)
 
     c1, c2, c3, c4 = st.columns(4)
     with c1:
@@ -465,8 +480,8 @@ def _render_analytics_tab(db, user_id: int):
 
     st.markdown("<div style='height:1rem;'></div>", unsafe_allow_html=True)
 
-    subject_df = analytics.get_subject_breakdown_df(db, user_id)
-    weekly_df = analytics.get_weekly_trend_df(db, user_id)
+    subject_df = cache.get_study_subject_breakdown(user_id)
+    weekly_df = cache.get_study_weekly_trend(user_id)
 
     col1, col2 = st.columns(2)
     with col1:

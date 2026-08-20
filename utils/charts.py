@@ -15,7 +15,7 @@ def apply_chart_theme(fig, title_text=None):
     - Explicit title positioning and typography
     - Prevents Plotly.js 'undefined' title bug by avoiding title=None
     - Legend placed below the plot area
-    - Responsive padding and Inter font styling
+    - Responsive padding and Plus Jakarta Sans / Inter font styling
     """
     if fig is None:
         return None
@@ -24,69 +24,53 @@ def apply_chart_theme(fig, title_text=None):
     if title_text is None and hasattr(fig, "layout") and fig.layout.title and fig.layout.title.text:
         title_text = fig.layout.title.text
 
+    font_family = "'Plus Jakarta Sans', 'Inter', sans-serif"
+
+    layout_updates = dict(
+        template="plotly_dark",
+        paper_bgcolor="rgba(0,0,0,0)",
+        plot_bgcolor="rgba(0,0,0,0)",
+        font=dict(family=font_family, size=12, color="#94A3B8"),
+        hoverlabel=dict(
+            bgcolor="#0f172a",
+            bordercolor="rgba(255,255,255,0.15)",
+            font=dict(family=font_family, size=12, color="#ffffff"),
+        ),
+        margin=dict(l=24, r=24, t=46 if title_text else 20, b=50),
+        legend=dict(
+            orientation="h",
+            yanchor="top",
+            y=-0.22,
+            xanchor="center",
+            x=0.5,
+            font=dict(size=11),
+            bgcolor="rgba(0,0,0,0)",
+        ),
+        xaxis=dict(
+            gridcolor="rgba(255,255,255,0.05)",
+            linecolor="rgba(255,255,255,0.1)",
+            tickfont=dict(size=11),
+        ),
+        yaxis=dict(
+            gridcolor="rgba(255,255,255,0.05)",
+            linecolor="rgba(255,255,255,0.1)",
+            tickfont=dict(size=11),
+        ),
+    )
+
     if title_text:
-        fig.update_layout(
-            template="plotly_dark",
-            paper_bgcolor="rgba(0,0,0,0)",
-            plot_bgcolor="rgba(0,0,0,0)",
-            font=dict(family="Inter, sans-serif", size=12, color="#94A3B8"),
-            title=dict(
-                text=title_text,
-                font=dict(family="Inter, sans-serif", size=13.5, color="#F8FAFC"),
-                x=0.01,
-                y=0.96,
-                xanchor="left",
-                yanchor="top",
-            ),
-            margin=dict(l=24, r=24, t=44, b=50),
-            legend=dict(
-                orientation="h",
-                yanchor="top",
-                y=-0.22,
-                xanchor="center",
-                x=0.5,
-                font=dict(size=11),
-                bgcolor="rgba(0,0,0,0)",
-            ),
-            xaxis=dict(
-                gridcolor="#1e293b",
-                linecolor="#334155",
-                tickfont=dict(size=10.5),
-            ),
-            yaxis=dict(
-                gridcolor="#1e293b",
-                linecolor="#334155",
-                tickfont=dict(size=10.5),
-            ),
+        layout_updates["title"] = dict(
+            text=title_text,
+            font=dict(family=font_family, size=14, color="#FFFFFF"),
+            x=0.01,
+            y=0.96,
+            xanchor="left",
+            yanchor="top",
         )
     else:
-        fig.update_layout(
-            template="plotly_dark",
-            paper_bgcolor="rgba(0,0,0,0)",
-            plot_bgcolor="rgba(0,0,0,0)",
-            font=dict(family="Inter, sans-serif", size=12, color="#94A3B8"),
-            title=dict(text=""),
-            margin=dict(l=24, r=24, t=20, b=50),
-            legend=dict(
-                orientation="h",
-                yanchor="top",
-                y=-0.22,
-                xanchor="center",
-                x=0.5,
-                font=dict(size=11),
-                bgcolor="rgba(0,0,0,0)",
-            ),
-            xaxis=dict(
-                gridcolor="#1e293b",
-                linecolor="#334155",
-                tickfont=dict(size=10.5),
-            ),
-            yaxis=dict(
-                gridcolor="#1e293b",
-                linecolor="#334155",
-                tickfont=dict(size=10.5),
-            ),
-        )
+        layout_updates["title"] = dict(text="")
+
+    fig.update_layout(**layout_updates)
     return fig
 
 

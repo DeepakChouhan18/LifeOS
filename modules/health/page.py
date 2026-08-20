@@ -13,6 +13,7 @@ import streamlit as st
 from datetime import date
 
 from database.connection import get_session
+from database import cache
 from modules.health import crud, analytics
 from modules.settings import crud as settings_crud
 from utils.charts import weight_trend_line, workout_consistency_bar, weekly_calories_line, macro_breakdown_donut
@@ -50,7 +51,7 @@ def render(user_id: int):
         with tab_weight:
             _render_weight(db, user_id)
         with tab_analytics:
-            _render_analytics(db, user_id)
+            _render_analytics(user_id)
     finally:
         db.close()
 
@@ -60,7 +61,7 @@ def render(user_id: int):
 # =======================================================================
 
 def _render_overview(db, profile, user_id: int):
-    summary = analytics.get_full_summary(db, user_id)
+    summary = cache.get_health_full_summary(user_id)
 
     if summary["calorie_warning"]:
         ui_components.info_banner(summary["calorie_warning"], banner_type="warning")
@@ -106,12 +107,12 @@ def _render_overview(db, profile, user_id: int):
             st.markdown("<div style='margin-top:0.6rem;'></div>", unsafe_allow_html=True)
             progress_metric("Water", summary["water_today"], summary["water_target_ml"], "ml")
 
-        # Macronutrient summary today
+        # Macronutrient summary today (from cache)
         st.markdown("<div style='margin-top:0.75rem;'></div>", unsafe_allow_html=True)
-        todays_logs = crud.list_nutrition_logs(db, user_id, log_date=date.today())
-        total_p = sum(l.protein_g or 0.0 for l in todays_logs)
-        total_c = sum(l.carbs_g or 0.0 for l in todays_logs)
-        total_f = sum(l.fats_g or 0.0 for l in todays_logs)
+        todays_logs = cache.get_health_nutrition_logs_today(user_id)
+        total_p = sum(lg["protein_g"] or 0.0 for lg in todays_logs)
+        total_c = sum(lg["carbs_g"] or 0.0 for lg in todays_logs)
+        total_f = sum(lg["fats_g"] or 0.0 for lg in todays_logs)
         st.markdown(
             f'<div style="font-size:0.78rem;color:#64748b;line-height:1.8;">'
             f'Protein: <b style="color:#94a3b8;">{total_p:.0f} g</b> &nbsp;·&nbsp; '
@@ -187,7 +188,7 @@ def _render_nutrition(db, user_id: int):
 
     with col_left:
         ui_components.section_header("LOG FOOD")
-        recent_foods = crud.get_recent_foods(db, user_id)
+        recent_foods = cache.get_health_recent_foods(user_id)
         if recent_foods:
             st.caption("Quick-fill from recent foods:")
             cols = st.columns(min(4, len(recent_foods)))
@@ -223,6 +224,7 @@ def _render_nutrition(db, user_id: int):
                     crud.log_nutrition(db, user_id, meal_name, date.today(), meal_type,
                                         int(calories), protein, carbs, fats)
                     st.session_state.pop("quick_food", None)
+                    cache.clear_after_nutrition_write()
                     st.success(f"Added {meal_name}.")
                     st.rerun()
                 except Exception as e:
@@ -238,16 +240,17 @@ def _render_nutrition(db, user_id: int):
             with col:
                 if st.button(f"+{amt} ml", key=f"water_{amt}", use_container_width=True):
                     crud.log_water(db, user_id, amt)
+                    cache.clear_after_water_write()
                     st.rerun()
 
     with col_right:
         ui_components.section_header("TODAY'S MEALS")
-        todays_logs = crud.list_nutrition_logs(db, user_id, log_date=date.today())
+        todays_logs = cache.get_health_nutrition_logs_today(user_id)
 
         fig = macro_breakdown_donut(
-            sum(l.protein_g or 0.0 for l in todays_logs),
-            sum(l.carbs_g or 0.0 for l in todays_logs),
-            sum(l.fats_g or 0.0 for l in todays_logs),
+            sum(lg["protein_g"] or 0.0 for lg in todays_logs),
+            sum(lg["carbs_g"] or 0.0 for lg in todays_logs),
+            sum(lg["fats_g"] or 0.0 for lg in todays_logs),
         )
         if fig:
             st.plotly_chart(fig, use_container_width=True, key="health_macro_donut")
@@ -256,27 +259,29 @@ def _render_nutrition(db, user_id: int):
 
         if todays_logs:
             st.markdown("<div style='height:0.5rem;'></div>", unsafe_allow_html=True)
-            for log in todays_logs:
+            for lg in todays_logs:
                 l_col1, l_col2, l_col3 = st.columns([3, 1.2, 1.0])
                 with l_col1:
                     st.markdown(
-                        f'<div style="font-weight:600;font-size:0.875rem;color:#e2e8f0;">{log.meal_name}</div>'
-                        f'<div style="font-size:0.75rem;color:#64748b;">{log.meal_type or "Meal"} · '
-                        f'P:{log.protein_g or 0:.0f}g C:{log.carbs_g or 0:.0f}g F:{log.fats_g or 0:.0f}g</div>',
+                        f'<div style="font-weight:600;font-size:0.875rem;color:#e2e8f0;">{lg["meal_name"]}</div>'
+                        f'<div style="font-size:0.75rem;color:#64748b;">{lg["meal_type"] or "Meal"} · '
+                        f'P:{lg["protein_g"] or 0:.0f}g C:{lg["carbs_g"] or 0:.0f}g F:{lg["fats_g"] or 0:.0f}g</div>',
                         unsafe_allow_html=True,
                     )
                 with l_col2:
                     st.markdown(
-                        f'<div style="text-align:right;font-weight:600;color:#f8fafc;font-size:0.875rem;">{log.calories or 0} kcal</div>',
+                        f'<div style="text-align:right;font-weight:600;color:#f8fafc;font-size:0.875rem;">{lg["calories"] or 0} kcal</div>',
                         unsafe_allow_html=True,
                     )
                 with l_col3:
                     sub_c1, sub_c2 = st.columns(2)
-                    if sub_c1.button("Copy", key=f"dup_{log.id}", help="Duplicate"):
-                        crud.duplicate_nutrition_log(db, log.id)
+                    if sub_c1.button("Copy", key=f"dup_{lg['id']}", help="Duplicate"):
+                        crud.duplicate_nutrition_log(db, lg["id"])
+                        cache.clear_after_nutrition_write()
                         st.rerun()
-                    if sub_c2.button("Delete", key=f"del_food_{log.id}", help="Delete"):
-                        crud.delete_nutrition_log(db, log.id)
+                    if sub_c2.button("Delete", key=f"del_food_{lg['id']}", help="Delete"):
+                        crud.delete_nutrition_log(db, lg["id"])
+                        cache.clear_after_nutrition_write()
                         st.rerun()
                 st.markdown('<hr style="border-color:#1a2540;margin:0.25rem 0;">', unsafe_allow_html=True)
 
@@ -306,6 +311,7 @@ def _render_workout(db, user_id: int):
                 try:
                     crud.log_workout(db, user_id, workout_date, workout_type,
                                       exercise or None, int(duration), notes or None)
+                    cache.clear_after_workout_write()
                     st.success("Workout logged.")
                     st.rerun()
                 except Exception as e:
@@ -313,7 +319,7 @@ def _render_workout(db, user_id: int):
 
     with col_hist:
         ui_components.section_header("RECENT WORKOUTS")
-        workouts = crud.list_workouts(db, user_id, limit=15)
+        workouts = cache.get_health_workouts(user_id, limit=15)
         if not workouts:
             ui_components.empty_state(
                 "No workouts logged yet",
@@ -324,23 +330,24 @@ def _render_workout(db, user_id: int):
             for w in workouts:
                 col_info, col_del = st.columns([5, 1])
                 with col_info:
-                    type_str = w.type or "Workout"
-                    exercise_str = f" — {w.exercise}" if w.exercise else ""
-                    date_lbl = w.workout_date.strftime("%b %d") if hasattr(w.workout_date, "strftime") else str(w.workout_date)
-                    dur_str = f"{w.duration_minutes} min" if w.duration_minutes else "—"
+                    type_str = w["type"] or "Workout"
+                    exercise_str = f" — {w['exercise']}" if w["exercise"] else ""
+                    date_lbl = w["workout_date"].strftime("%b %d") if hasattr(w["workout_date"], "strftime") else str(w["workout_date"])
+                    dur_str = f"{w['duration_minutes']} min" if w["duration_minutes"] else "—"
                     st.markdown(
                         f'<div style="padding:0.6rem 0.75rem;background:#111927;border-radius:8px;'
                         f'margin-bottom:0.35rem;border:1px solid #1e293b;">'
                         f'<div style="font-size:0.875rem;font-weight:500;color:#e2e8f0;">{type_str}{exercise_str}</div>'
                         f'<div style="font-size:0.75rem;color:#64748b;margin-top:0.1rem;">{date_lbl} · {dur_str}'
-                        + (f' · {w.notes}' if w.notes else '') +
+                        + (f' · {w["notes"]}' if w["notes"] else '') +
                         f'</div></div>',
                         unsafe_allow_html=True,
                     )
                 with col_del:
                     st.markdown("<div style='margin-top:0.6rem;'></div>", unsafe_allow_html=True)
-                    if st.button("✕", key=f"del_workout_{w.id}", use_container_width=True):
-                        crud.delete_workout(db, w.id)
+                    if st.button("✕", key=f"del_workout_{w['id']}", use_container_width=True):
+                        crud.delete_workout(db, w["id"])
+                        cache.clear_after_workout_write()
                         st.rerun()
 
 
@@ -362,6 +369,7 @@ def _render_weight(db, user_id: int):
                 try:
                     crud.log_body_metric(db, user_id, date.today(), weight,
                                           sleep if sleep > 0 else None)
+                    cache.clear_after_body_metric_write()
                     st.success("Metrics saved.")
                     st.rerun()
                 except Exception as e:
@@ -369,7 +377,7 @@ def _render_weight(db, user_id: int):
 
         st.markdown("<hr style='border-color:#1a2540;margin:1rem 0;'>", unsafe_allow_html=True)
         ui_components.section_header("WEIGHT PROGRESS")
-        progress = analytics.get_weight_progress(db, user_id)
+        progress = cache.get_health_weight_progress(user_id)
         if progress["starting"] is not None:
             c1, c2, c3 = st.columns(3)
             c1.metric("Starting", f"{progress['starting']:.1f} kg")
@@ -382,7 +390,7 @@ def _render_weight(db, user_id: int):
 
     with col_trend:
         ui_components.section_header("WEIGHT TREND")
-        weight_df = analytics.get_weight_trend_df(db, user_id)
+        weight_df = cache.get_health_weight_trend(user_id)
         fig = weight_trend_line(weight_df)
         if fig:
             st.plotly_chart(fig, use_container_width=True, key="health_weight_trend_chart")
@@ -394,9 +402,10 @@ def _render_weight(db, user_id: int):
 # ANALYTICS TAB
 # =======================================================================
 
-def _render_analytics(db, user_id: int):
-    averages = analytics.get_calorie_averages(db, user_id)
-    consistency = analytics.get_target_consistency(db, user_id, days=7)
+def _render_analytics(user_id: int):
+    # Read-only analytics tab — all data from cache, no db needed.
+    averages = cache.get_health_calorie_averages(user_id)
+    consistency = cache.get_health_target_consistency(user_id, days=7)
 
     c1, c2, c3, c4 = st.columns(4)
     with c1:
@@ -416,14 +425,14 @@ def _render_analytics(db, user_id: int):
 
     col1, col2 = st.columns(2)
     with col1:
-        nutrition_df = analytics.get_weekly_nutrition_df(db, user_id)
+        nutrition_df = cache.get_health_weekly_nutrition(user_id)
         fig = weekly_calories_line(nutrition_df)
         if fig:
             st.plotly_chart(fig, use_container_width=True, key="health_weekly_calorie_chart")
         else:
             empty_state("Not enough nutrition logs", icon="")
     with col2:
-        workout_df = analytics.get_workout_consistency_df(db, user_id)
+        workout_df = cache.get_health_workout_consistency(user_id)
         fig = workout_consistency_bar(workout_df)
         if fig:
             st.plotly_chart(fig, use_container_width=True, key="health_workouts_weekly_chart")
@@ -437,9 +446,9 @@ def _render_analytics(db, user_id: int):
         "Compares your formula-based TDEE to an estimate inferred from your actual logged "
         "calories and weight change. Requires consistent daily logs."
     )
-    observed = analytics.estimate_observed_maintenance(db, user_id)
+    observed = cache.get_health_observed_maintenance(user_id)
     if observed["available"]:
-        targets = analytics.get_user_health_targets(db, user_id)
+        targets = cache.get_health_user_targets(user_id)
         col_f, col_o = st.columns(2)
         with col_f:
             ui_components.metric_card("Formula TDEE", f"{targets['tdee']:.0f} kcal", accent_color="#10b981")

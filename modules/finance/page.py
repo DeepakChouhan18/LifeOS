@@ -12,6 +12,7 @@ import streamlit as st
 from datetime import date
 
 from database.connection import get_session
+from database import cache
 from modules.finance import crud, analytics
 from utils.charts import category_spend_pie, budget_remaining_bar, spend_trend_line
 from utils import ui_components, date_helpers
@@ -39,15 +40,20 @@ def render(user_id: int):
         with tab_budget:
             _render_budget_tab(db, user_id)
         with tab_analytics:
-            _render_analytics_tab(db, user_id)
+            _render_analytics_tab(user_id)
 
     finally:
         db.close()
 
 
 def _ensure_default_categories(db, user_id: int):
+    created_any = False
     for name in DEFAULT_EXPENSE_CATEGORIES:
-        crud.get_or_create_category(db, user_id, name)
+        result = crud.get_or_create_category(db, user_id, name)
+        # get_or_create_category returns the category; we can't easily detect
+        # "was it created?" without inspecting the object, so always refresh.
+    # Flush the categories cache so any newly created defaults appear immediately.
+    cache.get_finance_categories.clear()
 
 
 # =======================================================================
@@ -55,7 +61,7 @@ def _ensure_default_categories(db, user_id: int):
 # =======================================================================
 
 def _render_overview_tab(db, user_id: int):
-    summary = analytics.get_current_month_summary(db, user_id)
+    summary = cache.get_finance_current_month_summary(user_id)
 
     c1, c2, c3, c4 = st.columns(4)
     with c1:
@@ -88,8 +94,8 @@ def _render_overview_tab(db, user_id: int):
     col1, col2 = st.columns([1, 1], gap="large")
     with col1:
         ui_components.section_header("QUICK ADD EXPENSE")
-        categories = crud.list_categories(db, user_id)
-        category_names = [c.name for c in categories]
+        categories = cache.get_finance_categories(user_id)
+        category_names = [c["name"] for c in categories]
 
         with st.form("quick_add_expense_form", clear_on_submit=True):
             amount = st.number_input("Amount (₹)", min_value=1.0, max_value=500000.0, value=150.0, step=10.0)
@@ -99,14 +105,15 @@ def _render_overview_tab(db, user_id: int):
             submitted = st.form_submit_button("+ Add Expense", type="primary", use_container_width=True)
 
             if submitted:
-                category = next((c for c in categories if c.name == category_name), None)
-                crud.add_expense(db, user_id, float(amount), category.id if category else None,
+                category = next((c for c in categories if c["name"] == category_name), None)
+                crud.add_expense(db, user_id, float(amount), category["id"] if category else None,
                                   date.today(), description or None, payment_method)
+                cache.clear_after_expense_write()
                 st.success(f"Added ₹{amount:.0f} for {category_name}.")
                 st.rerun()
 
     with col2:
-        category_df = analytics.get_category_breakdown_df(db, user_id)
+        category_df = cache.get_finance_category_breakdown(user_id)
         fig = category_spend_pie(category_df)
         if fig:
             st.plotly_chart(fig, use_container_width=True, key="fin_overview_cat_pie")
@@ -127,8 +134,8 @@ def _render_expenses_tab(db, user_id: int):
 
     with col_add:
         ui_components.section_header("ADD EXPENSE")
-        categories = crud.list_categories(db, user_id)
-        category_names = [c.name for c in categories]
+        categories = cache.get_finance_categories(user_id)
+        category_names = [c["name"] for c in categories]
 
         with st.form("add_expense_full_form", clear_on_submit=True):
             amount = st.number_input("Amount (₹)", min_value=1.0, max_value=500000.0, value=250.0, step=10.0)
@@ -139,15 +146,16 @@ def _render_expenses_tab(db, user_id: int):
             submitted = st.form_submit_button("Save Expense", type="primary", use_container_width=True)
 
             if submitted:
-                category = next((c for c in categories if c.name == category_name), None)
-                crud.add_expense(db, user_id, float(amount), category.id if category else None,
+                category = next((c for c in categories if c["name"] == category_name), None)
+                crud.add_expense(db, user_id, float(amount), category["id"] if category else None,
                                   expense_date, description or None, payment_method)
+                cache.clear_after_expense_write()
                 st.success("Expense saved.")
                 st.rerun()
 
     with col_list:
         ui_components.section_header("HISTORY")
-        expenses = crud.list_expenses(db, user_id, limit=50)
+        expenses = cache.get_finance_expenses(user_id, limit=50)
         if not expenses:
             ui_components.empty_state(
                 "No expenses logged yet",
@@ -159,15 +167,15 @@ def _render_expenses_tab(db, user_id: int):
         for exp in expenses:
             col_info, col_del = st.columns([5, 1])
             with col_info:
-                date_lbl = date_helpers.format_date(exp.expense_date)
-                desc_lbl = exp.description or ""
-                cat_lbl = exp.category.name if exp.category else "General"
-                method_badge = ui_components.status_badge(exp.payment_method or "UPI", "info")
+                date_lbl = date_helpers.format_date(exp["expense_date"])
+                desc_lbl = exp["description"] or ""
+                cat_lbl = exp["category_name"]
+                method_badge = ui_components.status_badge(exp["payment_method"] or "UPI", "info")
                 st.markdown(
                     f'<div style="padding:0.6rem 0.8rem;background:#111927;border-radius:8px;'
                     f'margin-bottom:0.35rem;border:1px solid #1e293b;">'
                     f'<div style="display:flex;justify-content:space-between;align-items:center;">'
-                    f'<span style="font-weight:700;font-size:0.9rem;color:#f8fafc;">₹{exp.amount:.0f}</span>'
+                    f'<span style="font-weight:700;font-size:0.9rem;color:#f8fafc;">₹{exp["amount"]:.0f}</span>'
                     f'<span>{method_badge}</span>'
                     f'</div>'
                     f'<div style="font-size:0.78rem;color:#64748b;margin-top:0.1rem;">'
@@ -178,8 +186,9 @@ def _render_expenses_tab(db, user_id: int):
                 )
             with col_del:
                 st.markdown("<div style='margin-top:0.6rem;'></div>", unsafe_allow_html=True)
-                if st.button("Delete", key=f"del_exp_{exp.id}", use_container_width=True):
-                    crud.delete_expense(db, exp.id)
+                if st.button("Delete", key=f"del_exp_{exp['id']}", use_container_width=True):
+                    crud.delete_expense(db, exp["id"])
+                    cache.clear_after_expense_write()
                     st.rerun()
 
 
@@ -188,7 +197,7 @@ def _render_expenses_tab(db, user_id: int):
 # =======================================================================
 
 def _render_budget_tab(db, user_id: int):
-    over_budget = analytics.get_over_budget_categories(db, user_id)
+    over_budget = cache.get_finance_over_budget(user_id)
     for row in over_budget:
         ui_components.info_banner(
             f"{row['category_name']} is ₹{row['overspend']:.0f} over budget "
@@ -200,8 +209,8 @@ def _render_budget_tab(db, user_id: int):
 
     with col_set:
         ui_components.section_header("SET BUDGET LIMIT")
-        categories = crud.list_categories(db, user_id)
-        category_names = [c.name for c in categories]
+        categories = cache.get_finance_categories(user_id)
+        category_names = [c["name"] for c in categories]
 
         with st.form("set_budget_form", clear_on_submit=True):
             category_name = st.selectbox("Category", category_names)
@@ -209,15 +218,16 @@ def _render_budget_tab(db, user_id: int):
             submitted = st.form_submit_button("Set Limit", type="primary", use_container_width=True)
 
             if submitted:
-                category = next((c for c in categories if c.name == category_name), None)
+                category = next((c for c in categories if c["name"] == category_name), None)
                 month_start = date.today().replace(day=1)
-                crud.set_budget(db, user_id, category.id, month_start, float(limit_amount))
+                crud.set_budget(db, user_id, category["id"], month_start, float(limit_amount))
+                cache.clear_after_budget_write()
                 st.success(f"Budget set for {category_name}: ₹{limit_amount:.0f}")
                 st.rerun()
 
     with col_status:
         ui_components.section_header("BUDGET STATUS")
-        budget_df = analytics.get_budget_remaining_df(db, user_id)
+        budget_df = cache.get_finance_budget_remaining(user_id)
         if budget_df.empty:
             ui_components.empty_state(
                 "No budgets configured for this month",
@@ -235,8 +245,9 @@ def _render_budget_tab(db, user_id: int):
 # ANALYTICS TAB
 # =======================================================================
 
-def _render_analytics_tab(db, user_id: int):
-    insights = analytics.get_finance_insights(db, user_id)
+def _render_analytics_tab(user_id: int):
+    # Read-only — all data from cache, no db needed.
+    insights = cache.get_finance_insights(user_id)
     if insights:
         ui_components.section_header("INSIGHTS")
         for insight in insights:
@@ -245,7 +256,7 @@ def _render_analytics_tab(db, user_id: int):
 
     col1, col2 = st.columns(2)
     with col1:
-        category_df = analytics.get_category_breakdown_df(db, user_id)
+        category_df = cache.get_finance_category_breakdown(user_id)
         fig = category_spend_pie(category_df)
         if fig:
             st.plotly_chart(fig, use_container_width=True, key="fin_analytics_cat_pie")
@@ -253,7 +264,7 @@ def _render_analytics_tab(db, user_id: int):
             ui_components.empty_state("No category data yet", icon="")
 
     with col2:
-        trend_df = analytics.get_spend_trend_df(db, user_id)
+        trend_df = cache.get_finance_spend_trend(user_id)
         fig = spend_trend_line(trend_df)
         if fig:
             st.plotly_chart(fig, use_container_width=True, key="fin_spend_trend_line")
@@ -263,7 +274,7 @@ def _render_analytics_tab(db, user_id: int):
     st.markdown("<hr style='border-color:#1a2540;margin:1.25rem 0;'>", unsafe_allow_html=True)
 
     ui_components.section_header("LARGEST EXPENSES THIS MONTH")
-    largest = analytics.get_largest_expenses(db, user_id)
+    largest = cache.get_finance_largest_expenses(user_id)
     if not largest:
         ui_components.empty_state("No expenses logged yet", icon="")
     else:

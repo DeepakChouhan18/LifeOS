@@ -10,56 +10,54 @@ Design philosophy:
 import streamlit as st
 from datetime import date
 
-from database.connection import get_session
-from modules.dashboard import aggregator
-from modules.settings import crud as settings_crud
+from database import cache
 from utils import ui_components, date_helpers, auth as auth_utils
 
 
 def render(user_id: int):
-    db = get_session()
-    try:
-        profile = settings_crud.get_user_profile(db, user_id)
-        user_name = profile.name if profile else auth_utils.get_current_display_name()
+    # Dashboard is read-only — no DB session needed; all data comes from cache.
+    user_name = cache.get_user_display_name(user_id) or auth_utils.get_current_display_name()
 
-        greet_text, today_str = date_helpers.greeting(), date_helpers.today_label()
+    greet_text, today_str = date_helpers.greeting(), date_helpers.today_label()
 
-        # ---- Hero greeting ----
-        st.markdown(
-            f"""
-            <div style="margin-bottom:1.75rem; padding-bottom:1.25rem; border-bottom:1px solid #1a2540;">
-                <div style="font-size:1.65rem; font-weight:700; color:#f8fafc; letter-spacing:-0.025em; margin-bottom:0.2rem;">
-                    {greet_text}, {user_name}.
+    # ---- Hero greeting ----
+    st.markdown(
+        f"""
+        <div style="display:flex; justify-content:space-between; align-items:flex-end; margin-bottom:2rem; padding-bottom:1.5rem; border-bottom:1px solid rgba(255,255,255,0.07);">
+            <div>
+                <div style="font-size:1.9rem; font-weight:800; color:#ffffff; letter-spacing:-0.035em; margin-bottom:0.3rem; line-height:1.2;">
+                    {greet_text}, <span style="background:linear-gradient(135deg, #a5b4fc 0%, #818cf8 100%); -webkit-background-clip:text; -webkit-text-fill-color:transparent;">{user_name}</span>.
                 </div>
-                <div style="font-size:0.875rem; color:#475569;">
-                    {today_str} — Here's your progress today.
+                <div style="font-size:0.88rem; color:#64748b; font-weight:400;">
+                    Here is your personal analytics and consistency overview for today.
                 </div>
             </div>
-            """,
-            unsafe_allow_html=True,
-        )
+            <div style="background:rgba(255,255,255,0.04); border:1px solid rgba(255,255,255,0.08); border-radius:999px; padding:0.35rem 0.9rem; font-size:0.78rem; font-weight:600; color:#94a3b8; letter-spacing:0.02em;">
+                {today_str}
+            </div>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
 
-        summary = aggregator.get_combined_summary(db, user_id)
+    summary = cache.get_dashboard_combined_summary(user_id)
 
-        # ---- TODAY summary cards ----
-        _render_today_cards(summary)
+    # ---- TODAY summary cards ----
+    _render_today_cards(summary)
 
-        st.markdown("<div style='height:1.25rem;'></div>", unsafe_allow_html=True)
+    st.markdown("<div style='height:1.25rem;'></div>", unsafe_allow_html=True)
 
-        # ---- Two-column: Priorities | Insights ----
-        col_left, col_right = st.columns([1, 1], gap="large")
-        with col_left:
-            _render_priorities(summary)
-        with col_right:
-            _render_insights(summary)
+    # ---- Two-column: Priorities | Insights ----
+    col_left, col_right = st.columns([1, 1], gap="large")
+    with col_left:
+        _render_priorities(summary)
+    with col_right:
+        _render_insights(summary)
 
-        st.markdown("<hr style='border-color:#1a2540; margin:1.75rem 0;'>", unsafe_allow_html=True)
+    st.markdown("<hr style='border-color:#1a2540; margin:1.75rem 0;'>", unsafe_allow_html=True)
 
-        # ---- Consistency Score ----
-        _render_consistency_score(summary)
-
-    finally:
-        db.close()
+    # ---- Consistency Score ----
+    _render_consistency_score(summary)
 
 
 # ---------------------------------------------------------------------------

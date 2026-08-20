@@ -35,22 +35,42 @@ def inject_custom_css():
     st.markdown("""
     <style>
     /* ---- Import Google Fonts ---- */
-    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
+    @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Inter:wght@300;400;500;600;700&display=swap');
 
     /* ---- Global reset & base typography ---- */
     html, body, [class*="css"] {
-        font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif !important;
+        font-family: 'Plus Jakarta Sans', 'Inter', -apple-system, BlinkMacSystemFont, sans-serif !important;
         -webkit-font-smoothing: antialiased;
         -moz-osx-font-smoothing: grayscale;
+        color: #e2e8f0;
     }
 
-    /* ---- App background ---- */
+    /* ---- Custom Scrollbar ---- */
+    ::-webkit-scrollbar {
+        width: 6px;
+        height: 6px;
+    }
+    ::-webkit-scrollbar-track {
+        background: #080c14;
+    }
+    ::-webkit-scrollbar-thumb {
+        background: #1e293b;
+        border-radius: 999px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+        background: #334155;
+    }
+
+    /* ---- App background with subtle atmospheric mesh gradient ---- */
     .stApp {
-        background-color: #090d16 !important;
+        background-color: #080c14 !important;
+        background-image: 
+            radial-gradient(ellipse 80% 50% at 50% -20%, rgba(99, 102, 241, 0.08) 0%, transparent 60%),
+            radial-gradient(ellipse 60% 40% at 90% 10%, rgba(16, 185, 129, 0.03) 0%, transparent 50%) !important;
+        background-attachment: fixed !important;
     }
 
-    /* ---- Smooth interaction & Anti-dimming reset ---- */
-    /* Streamlit by default fades/dims widgets and containers to 0.4 opacity on every rerun */
+    /* ---- Anti-dimming reset & smooth state transitions ---- */
     .stApp,
     [data-testid="stAppViewContainer"],
     [data-testid="stAppViewBlockContainer"],
@@ -69,37 +89,36 @@ def inject_custom_css():
         opacity: 1 !important;
     }
 
-    /* Prevent top status widget from causing header flicker */
+    /* Hide top status widget */
     div[data-testid="stStatusWidget"] {
         visibility: hidden !important;
     }
 
     /* ---- Main content container ---- */
     .main .block-container {
-        padding: 1.75rem 2.5rem 4rem 2.5rem !important;
-        max-width: 1200px !important;
+        padding: 2rem 2.5rem 4rem 2.5rem !important;
+        max-width: 1240px !important;
     }
 
-
     /* ====================================================================
-       SIDEBAR — persistent application navigation
+       SIDEBAR — Modern SaaS Navigation
     ==================================================================== */
 
-    /* Force section[data-testid="stSidebar"] to ALWAYS remain expanded, visible, and 250px wide */
     section[data-testid="stSidebar"],
     section[data-testid="stSidebar"][aria-expanded="false"],
     section[data-testid="stSidebar"][data-collapsed="true"],
     div[data-testid="stSidebar"] {
-        background-color: #0d1424 !important;
-        border-right: 1px solid #1a2540 !important;
+        background-color: #090e1a !important;
+        border-right: 1px solid rgba(255, 255, 255, 0.06) !important;
         margin-left: 0 !important;
         transform: none !important;
         visibility: visible !important;
         display: flex !important;
-        min-width: 250px !important;
-        width: 250px !important;
-        max-width: 250px !important;
+        min-width: 255px !important;
+        width: 255px !important;
+        max-width: 255px !important;
         opacity: 1 !important;
+        box-shadow: 4px 0 24px rgba(0, 0, 0, 0.25) !important;
     }
     section[data-testid="stSidebar"] > div:first-child {
         padding-top: 0.5rem !important;
@@ -109,7 +128,6 @@ def inject_custom_css():
         visibility: visible !important;
         opacity: 1 !important;
     }
-    /* Hide Streamlit collapse buttons so sidebar remains permanently fixed open */
     [data-testid="stSidebarCollapseButton"],
     [data-testid="stSidebarCollapsedControl"],
     button[aria-label="Close sidebar"],
@@ -117,79 +135,87 @@ def inject_custom_css():
         display: none !important;
     }
 
-    /* Sidebar nav buttons — default (inactive) state */
+    /* Sidebar nav buttons */
     section[data-testid="stSidebar"] .stButton > button {
         width: 100% !important;
         text-align: left !important;
         background: transparent !important;
-        border: none !important;
-        border-radius: 8px !important;
+        border: 1px solid transparent !important;
+        border-radius: 9px !important;
         color: #94a3b8 !important;
-        font-size: 0.875rem !important;
+        font-size: 0.88rem !important;
         font-weight: 500 !important;
-        padding: 0.55rem 0.85rem !important;
-        margin-bottom: 2px !important;
-        transition: all 0.15s ease !important;
+        padding: 0.58rem 0.9rem !important;
+        margin-bottom: 3px !important;
+        transition: all 0.18s cubic-bezier(0.16, 1, 0.3, 1) !important;
         box-shadow: none !important;
         justify-content: flex-start !important;
+        letter-spacing: -0.01em !important;
     }
     section[data-testid="stSidebar"] .stButton > button:hover {
-        background: #1a2540 !important;
+        background: rgba(255, 255, 255, 0.05) !important;
         color: #f8fafc !important;
+        border-color: rgba(255, 255, 255, 0.05) !important;
+        transform: translateX(2px) !important;
     }
 
     /* Active nav button */
     section[data-testid="stSidebar"] .stButton > button[kind="primary"] {
-        background: #1e1b4b !important;
-        color: #818cf8 !important;
+        background: linear-gradient(90deg, rgba(99, 102, 241, 0.16) 0%, rgba(99, 102, 241, 0.04) 100%) !important;
+        color: #c7d2fe !important;
         font-weight: 600 !important;
         border-left: 3px solid #6366f1 !important;
-        border-radius: 8px !important;
-        padding-left: calc(0.85rem - 3px) !important;
+        border-top: 1px solid rgba(99, 102, 241, 0.2) !important;
+        border-bottom: 1px solid rgba(99, 102, 241, 0.1) !important;
+        border-right: 1px solid rgba(99, 102, 241, 0.1) !important;
+        border-radius: 9px !important;
+        padding-left: calc(0.9rem - 3px) !important;
+        box-shadow: 0 2px 10px rgba(99, 102, 241, 0.15) !important;
     }
     section[data-testid="stSidebar"] .stButton > button[kind="primary"]:hover {
-        background: #2e2a72 !important;
-        color: #a5b4fc !important;
+        background: linear-gradient(90deg, rgba(99, 102, 241, 0.22) 0%, rgba(99, 102, 241, 0.08) 100%) !important;
+        color: #e0e7ff !important;
     }
 
     /* Sidebar divider */
     section[data-testid="stSidebar"] hr {
-        border-color: #1a2540 !important;
-        margin: 0.5rem 0 !important;
+        border-color: rgba(255, 255, 255, 0.06) !important;
+        margin: 0.75rem 0 !important;
     }
 
     /* ====================================================================
-       TABS
+       TABS — Modern Segment / Underline
     ==================================================================== */
 
     .stTabs [data-baseweb="tab-list"] {
-        gap: 0;
+        gap: 0.5rem;
         background: transparent;
-        border-bottom: 1px solid #1e293b;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.08);
         border-radius: 0;
-        padding: 0;
-        margin-bottom: 1.5rem;
+        padding: 0 0 0.1rem 0;
+        margin-bottom: 1.75rem;
     }
     .stTabs [data-baseweb="tab"] {
-        border-radius: 0;
-        padding: 0.6rem 1rem;
+        border-radius: 6px 6px 0 0;
+        padding: 0.65rem 1.15rem;
         font-weight: 500;
-        font-size: 0.85rem;
+        font-size: 0.88rem;
         color: #64748b;
-        transition: color 0.12s ease;
+        transition: all 0.15s ease;
         border-bottom: 2px solid transparent;
         margin-bottom: -1px;
         background: transparent !important;
     }
     .stTabs [data-baseweb="tab"]:hover {
         color: #cbd5e1;
-        background: transparent !important;
+        background: rgba(255, 255, 255, 0.03) !important;
     }
     .stTabs [aria-selected="true"] {
         background: transparent !important;
-        color: #e2e8f0 !important;
+        color: #f8fafc !important;
         font-weight: 600 !important;
         border-bottom: 2px solid #6366f1 !important;
+        box-shadow: 0 2px 10px rgba(99, 102, 241, 0.2) !important;
     }
     .stTabs [data-baseweb="tab-highlight"] {
         display: none !important;
@@ -199,81 +225,95 @@ def inject_custom_css():
     }
 
     /* ====================================================================
-       STREAMLIT METRIC (native st.metric)
+       STREAMLIT METRICS (Native st.metric)
     ==================================================================== */
 
     [data-testid="stMetric"] {
-        background: #111927;
-        border: 1px solid #1e293b;
-        border-radius: 10px;
-        padding: 1rem 1.25rem;
+        background: linear-gradient(180deg, rgba(18, 26, 43, 0.75) 0%, rgba(13, 19, 32, 0.75) 100%) !important;
+        backdrop-filter: blur(12px) !important;
+        -webkit-backdrop-filter: blur(12px) !important;
+        border: 1px solid rgba(255, 255, 255, 0.07) !important;
+        border-radius: 12px !important;
+        padding: 1.1rem 1.25rem !important;
+        box-shadow: 0 4px 20px -2px rgba(0, 0, 0, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.05) !important;
+        transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1) !important;
+    }
+    [data-testid="stMetric"]:hover {
+        border-color: rgba(99, 102, 241, 0.3) !important;
+        transform: translateY(-2px) !important;
+        box-shadow: 0 8px 24px -4px rgba(0, 0, 0, 0.5), 0 0 16px -4px rgba(99, 102, 241, 0.15) !important;
     }
     [data-testid="stMetricLabel"] {
         font-size: 0.72rem !important;
         font-weight: 600 !important;
         text-transform: uppercase !important;
-        letter-spacing: 0.06em !important;
+        letter-spacing: 0.08em !important;
         color: #64748b !important;
     }
     [data-testid="stMetricValue"] {
-        font-size: 1.6rem !important;
-        font-weight: 700 !important;
-        color: #f1f5f9 !important;
-        letter-spacing: -0.02em !important;
+        font-size: 1.7rem !important;
+        font-weight: 800 !important;
+        color: #ffffff !important;
+        letter-spacing: -0.03em !important;
     }
     [data-testid="stMetricDelta"] {
-        font-size: 0.78rem !important;
-        font-weight: 500 !important;
+        font-size: 0.8rem !important;
+        font-weight: 600 !important;
     }
 
     /* ====================================================================
-       FORMS
+       FORMS & CONTAINERS
     ==================================================================== */
 
     .stForm {
-        background: #111927 !important;
-        border: 1px solid #1e293b !important;
-        border-radius: 12px !important;
-        padding: 1.5rem !important;
+        background: linear-gradient(180deg, rgba(18, 26, 43, 0.7) 0%, rgba(13, 19, 32, 0.75) 100%) !important;
+        backdrop-filter: blur(12px) !important;
+        -webkit-backdrop-filter: blur(12px) !important;
+        border: 1px solid rgba(255, 255, 255, 0.08) !important;
+        border-radius: 14px !important;
+        padding: 1.75rem !important;
+        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.06) !important;
     }
     .stForm [data-testid="stFormSubmitButton"] > button {
-        border-radius: 8px !important;
+        border-radius: 9px !important;
         font-weight: 600 !important;
-        font-size: 0.9rem !important;
-        padding: 0.6rem 1.6rem !important;
+        font-size: 0.92rem !important;
+        padding: 0.65rem 1.75rem !important;
     }
 
     /* ====================================================================
-       BUTTONS (general)
+       BUTTONS
     ==================================================================== */
 
     .stButton > button {
-        border-radius: 8px !important;
-        font-weight: 500 !important;
+        border-radius: 9px !important;
+        font-weight: 600 !important;
         font-size: 0.875rem !important;
-        transition: all 0.12s ease !important;
-        letter-spacing: 0 !important;
+        letter-spacing: -0.01em !important;
+        transition: all 0.18s cubic-bezier(0.16, 1, 0.3, 1) !important;
+        padding: 0.55rem 1.15rem !important;
     }
     .stButton > button[kind="primary"] {
-        background: #6366f1 !important;
-        border: none !important;
-        color: white !important;
-        box-shadow: 0 1px 4px rgba(99,102,241,0.25) !important;
+        background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%) !important;
+        border: 1px solid rgba(255, 255, 255, 0.15) !important;
+        color: #ffffff !important;
+        box-shadow: 0 2px 10px rgba(99, 102, 241, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.2) !important;
     }
     .stButton > button[kind="primary"]:hover {
-        background: #4f46e5 !important;
-        box-shadow: 0 2px 10px rgba(99,102,241,0.35) !important;
+        background: linear-gradient(135deg, #4f46e5 0%, #4338ca 100%) !important;
+        box-shadow: 0 4px 16px rgba(99, 102, 241, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.25) !important;
         transform: translateY(-1px) !important;
     }
     .stButton > button[kind="secondary"] {
-        background: transparent !important;
-        border: 1px solid #334155 !important;
-        color: #94a3b8 !important;
+        background: rgba(255, 255, 255, 0.04) !important;
+        border: 1px solid rgba(255, 255, 255, 0.09) !important;
+        color: #cbd5e1 !important;
     }
     .stButton > button[kind="secondary"]:hover {
-        background: #1a2233 !important;
-        border-color: #475569 !important;
-        color: #e2e8f0 !important;
+        background: rgba(255, 255, 255, 0.08) !important;
+        border-color: rgba(255, 255, 255, 0.18) !important;
+        color: #ffffff !important;
+        transform: translateY(-1px) !important;
     }
 
     /* ====================================================================
@@ -281,13 +321,14 @@ def inject_custom_css():
     ==================================================================== */
 
     .stProgress > div > div > div {
-        background: #6366f1;
-        border-radius: 999px;
-        transition: width 0.4s ease;
+        background: linear-gradient(90deg, #6366f1 0%, #818cf8 100%) !important;
+        border-radius: 999px !important;
+        transition: width 0.4s cubic-bezier(0.16, 1, 0.3, 1) !important;
     }
     .stProgress > div > div {
-        background: #1e293b;
-        border-radius: 999px;
+        background: rgba(255, 255, 255, 0.06) !important;
+        border-radius: 999px !important;
+        height: 6px !important;
     }
 
     /* ====================================================================
@@ -297,14 +338,14 @@ def inject_custom_css():
     div[data-baseweb="input"],
     .stTextArea > div > div > textarea,
     div[data-baseweb="select"] > div {
-        background: #111927 !important;
-        border: 1px solid #334155 !important;
-        border-radius: 8px !important;
-        color: #e2e8f0 !important;
+        background: rgba(12, 18, 32, 0.8) !important;
+        border: 1px solid rgba(255, 255, 255, 0.1) !important;
+        border-radius: 9px !important;
+        color: #f1f5f9 !important;
         font-size: 0.875rem !important;
+        transition: all 0.15s ease !important;
     }
 
-    /* Remove nested borders inside BaseWeb selectbox control */
     div[data-baseweb="select"] div {
         border: none !important;
         box-shadow: none !important;
@@ -319,7 +360,7 @@ def inject_custom_css():
     div[data-baseweb="input"] > input {
         background: transparent !important;
         border: none !important;
-        color: #e2e8f0 !important;
+        color: #f1f5f9 !important;
         font-size: 0.875rem !important;
         box-shadow: none !important;
     }
@@ -328,31 +369,32 @@ def inject_custom_css():
     .stTextArea > div > div > textarea:focus,
     div[data-baseweb="select"] > div:focus-within {
         border-color: #6366f1 !important;
-        box-shadow: 0 0 0 2px rgba(99,102,241,0.15) !important;
+        box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.25) !important;
     }
 
-    /* BaseWeb Select Popover Menu */
+    /* Popovers / Select Menus */
     div[data-baseweb="popover"],
     div[data-baseweb="menu"],
     ul[role="listbox"] {
-        background-color: #111927 !important;
-        border: 1px solid #334155 !important;
-        border-radius: 8px !important;
-        box-shadow: 0 8px 24px rgba(0,0,0,0.4) !important;
+        background-color: #0f172a !important;
+        border: 1px solid rgba(255, 255, 255, 0.12) !important;
+        border-radius: 10px !important;
+        box-shadow: 0 12px 36px rgba(0, 0, 0, 0.6) !important;
     }
 
     li[role="option"] {
-        background-color: #111927 !important;
+        background-color: #0f172a !important;
         color: #cbd5e1 !important;
         font-size: 0.875rem !important;
-        padding: 0.5rem 0.75rem !important;
-        border-radius: 4px !important;
+        padding: 0.55rem 0.85rem !important;
+        border-radius: 6px !important;
+        margin: 2px 4px !important;
     }
 
     li[role="option"]:hover,
     li[role="option"][aria-selected="true"] {
         background-color: #1e293b !important;
-        color: #f8fafc !important;
+        color: #ffffff !important;
     }
 
     div[data-baseweb="input"] button {
@@ -370,9 +412,10 @@ def inject_custom_css():
     ==================================================================== */
 
     .stDataFrame {
-        border: 1px solid #1e293b !important;
-        border-radius: 10px !important;
+        border: 1px solid rgba(255, 255, 255, 0.08) !important;
+        border-radius: 12px !important;
         overflow: hidden !important;
+        background: rgba(13, 19, 32, 0.6) !important;
     }
 
     /* ====================================================================
@@ -383,15 +426,20 @@ def inject_custom_css():
         font-weight: 600 !important;
         font-size: 0.875rem !important;
         color: #e2e8f0 !important;
-        background: #111927 !important;
-        border-radius: 8px !important;
-        border: 1px solid #1e293b !important;
+        background: rgba(18, 26, 43, 0.6) !important;
+        border-radius: 10px !important;
+        border: 1px solid rgba(255, 255, 255, 0.08) !important;
+        transition: all 0.15s ease !important;
+    }
+    .streamlit-expanderHeader:hover {
+        background: rgba(25, 36, 60, 0.7) !important;
+        border-color: rgba(255, 255, 255, 0.14) !important;
     }
     .streamlit-expanderContent {
-        border: 1px solid #1e293b !important;
+        border: 1px solid rgba(255, 255, 255, 0.08) !important;
         border-top: none !important;
-        border-radius: 0 0 8px 8px !important;
-        background: #0d1424 !important;
+        border-radius: 0 0 10px 10px !important;
+        background: rgba(9, 14, 26, 0.7) !important;
     }
 
     /* ====================================================================
@@ -399,9 +447,10 @@ def inject_custom_css():
     ==================================================================== */
 
     [data-testid="stAlert"] {
-        border-radius: 8px !important;
+        border-radius: 10px !important;
         border-left-width: 3px !important;
         font-size: 0.875rem !important;
+        backdrop-filter: blur(8px) !important;
     }
 
     /* ====================================================================
@@ -410,8 +459,8 @@ def inject_custom_css():
 
     hr {
         border: none !important;
-        border-top: 1px solid #1e293b !important;
-        margin: 1.5rem 0 !important;
+        border-top: 1px solid rgba(255, 255, 255, 0.07) !important;
+        margin: 1.75rem 0 !important;
     }
 
     /* ====================================================================
@@ -434,18 +483,18 @@ def inject_custom_css():
 
     /* ---- Page header ---- */
     .los-page-title {
-        font-size: 1.75rem;
-        font-weight: 700;
-        letter-spacing: -0.025em;
-        color: #f8fafc;
-        margin: 0 0 0.2rem 0;
+        font-size: 1.85rem;
+        font-weight: 800;
+        letter-spacing: -0.035em;
+        color: #ffffff;
+        margin: 0 0 0.25rem 0;
         line-height: 1.2;
     }
     .los-page-subtitle {
-        font-size: 0.875rem;
+        font-size: 0.88rem;
         color: #64748b;
         font-weight: 400;
-        margin: 0 0 1.5rem 0;
+        margin: 0 0 1.75rem 0;
     }
 
     /* ---- Section header ---- */
@@ -453,39 +502,50 @@ def inject_custom_css():
         font-size: 0.72rem;
         font-weight: 700;
         text-transform: uppercase;
-        letter-spacing: 0.08em;
-        color: #475569;
-        margin: 0 0 0.75rem 0;
+        letter-spacing: 0.09em;
+        color: #64748b;
+        margin: 0 0 0.85rem 0;
+        display: flex;
+        align-items: center;
+        gap: 0.4rem;
     }
 
-    /* ---- Custom metric card ---- */
+    /* ---- Custom metric card with glassmorphism & accent glow ---- */
     .los-metric {
-        background: #111927;
-        border: 1px solid #1e293b;
-        border-radius: 10px;
-        padding: 1.1rem 1.2rem;
+        background: linear-gradient(180deg, rgba(18, 26, 43, 0.75) 0%, rgba(13, 19, 32, 0.75) 100%);
+        backdrop-filter: blur(12px);
+        -webkit-backdrop-filter: blur(12px);
+        border: 1px solid rgba(255, 255, 255, 0.07);
+        border-radius: 12px;
+        padding: 1.15rem 1.25rem;
         border-left: 3px solid transparent;
-        transition: border-color 0.15s;
+        box-shadow: 0 4px 20px -2px rgba(0, 0, 0, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.05);
+        transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
         height: 100%;
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
     }
     .los-metric:hover {
-        border-color: #334155;
+        border-color: rgba(99, 102, 241, 0.35);
+        transform: translateY(-2px);
+        box-shadow: 0 8px 24px -4px rgba(0, 0, 0, 0.5), 0 0 16px -4px rgba(99, 102, 241, 0.15);
     }
     .los-metric-label {
         font-size: 0.72rem;
         font-weight: 600;
         text-transform: uppercase;
-        letter-spacing: 0.06em;
+        letter-spacing: 0.08em;
         color: #64748b;
         margin: 0 0 0.4rem 0;
     }
     .los-metric-value {
-        font-size: 1.55rem;
-        font-weight: 700;
-        letter-spacing: -0.025em;
-        color: #f8fafc;
+        font-size: 1.7rem;
+        font-weight: 800;
+        letter-spacing: -0.03em;
+        color: #ffffff;
         line-height: 1.1;
-        margin: 0 0 0.25rem 0;
+        margin: 0 0 0.35rem 0;
     }
     .los-metric-sub {
         font-size: 0.78rem;
@@ -493,126 +553,173 @@ def inject_custom_css():
         margin: 0;
         line-height: 1.4;
     }
-    .los-metric-delta-up   { color: #22c55e; font-size: 0.78rem; font-weight: 500; }
-    .los-metric-delta-down { color: #ef4444; font-size: 0.78rem; font-weight: 500; }
-    .los-metric-delta-neu  { color: #64748b; font-size: 0.78rem; font-weight: 500; }
+    .los-metric-delta-pill {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.25rem;
+        padding: 0.18rem 0.5rem;
+        border-radius: 999px;
+        font-size: 0.74rem;
+        font-weight: 600;
+        margin-bottom: 0.25rem;
+        width: fit-content;
+    }
+    .los-metric-delta-up {
+        background: rgba(34, 197, 94, 0.12);
+        color: #4ade80;
+        border: 1px solid rgba(34, 197, 94, 0.2);
+    }
+    .los-metric-delta-down {
+        background: rgba(239, 68, 68, 0.12);
+        color: #f87171;
+        border: 1px solid rgba(239, 68, 68, 0.2);
+    }
+    .los-metric-delta-neu {
+        background: rgba(148, 163, 184, 0.1);
+        color: #94a3b8;
+        border: 1px solid rgba(148, 163, 184, 0.15);
+    }
 
     /* ---- Status badge ---- */
     .los-badge {
-        display: inline-block;
-        padding: 0.15rem 0.55rem;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.3rem;
+        padding: 0.2rem 0.6rem;
         border-radius: 999px;
-        font-size: 0.7rem;
+        font-size: 0.72rem;
         font-weight: 600;
-        letter-spacing: 0.02em;
+        letter-spacing: 0.01em;
         white-space: nowrap;
-        line-height: 1.6;
+        line-height: 1.4;
     }
-    .los-badge-success  { background: #052e16; color: #4ade80; border: 1px solid #15803d; }
-    .los-badge-warning  { background: #1c1407; color: #fbbf24; border: 1px solid #92400e; }
-    .los-badge-danger   { background: #1f0707; color: #f87171; border: 1px solid #991b1b; }
-    .los-badge-info     { background: #1e1b4b; color: #a5b4fc; border: 1px solid #3730a3; }
-    .los-badge-neutral  { background: #0f172a; color: #94a3b8; border: 1px solid #334155; }
-    .los-badge-study    { background: #1e1b4b; color: #a5b4fc; border: 1px solid #4f46e5; }
-    .los-badge-health   { background: #052e16; color: #6ee7b7; border: 1px solid #065f46; }
-    .los-badge-finance  { background: #1c1407; color: #fde68a; border: 1px solid #78350f; }
+    .los-badge-success  { background: rgba(34, 197, 94, 0.12); color: #4ade80; border: 1px solid rgba(34, 197, 94, 0.25); }
+    .los-badge-warning  { background: rgba(245, 158, 11, 0.12); color: #fbbf24; border: 1px solid rgba(245, 158, 11, 0.25); }
+    .los-badge-danger   { background: rgba(239, 68, 68, 0.12); color: #f87171; border: 1px solid rgba(239, 68, 68, 0.25); }
+    .los-badge-info     { background: rgba(99, 102, 241, 0.12); color: #a5b4fc; border: 1px solid rgba(99, 102, 241, 0.25); }
+    .los-badge-neutral  { background: rgba(148, 163, 184, 0.1); color: #94a3b8; border: 1px solid rgba(148, 163, 184, 0.2); }
+    .los-badge-study    { background: rgba(99, 102, 241, 0.12); color: #a5b4fc; border: 1px solid rgba(99, 102, 241, 0.25); }
+    .los-badge-health   { background: rgba(16, 185, 129, 0.12); color: #6ee7b7; border: 1px solid rgba(16, 185, 129, 0.25); }
+    .los-badge-finance  { background: rgba(245, 158, 11, 0.12); color: #fde68a; border: 1px solid rgba(245, 158, 11, 0.25); }
 
     /* ---- Info banner / alert ---- */
     .los-banner {
-        border-radius: 8px;
-        padding: 0.75rem 1rem;
-        margin-bottom: 1rem;
+        border-radius: 10px;
+        padding: 0.85rem 1.15rem;
+        margin-bottom: 1.25rem;
         font-size: 0.875rem;
         line-height: 1.5;
         border-left: 3px solid;
         display: flex;
-        gap: 0.5rem;
-        align-items: flex-start;
+        gap: 0.75rem;
+        align-items: center;
+        backdrop-filter: blur(8px);
     }
-    .los-banner-info    { background: #0f172a; color: #c7d2fe; border-color: #6366f1; }
-    .los-banner-success { background: #052e16; color: #86efac; border-color: #16a34a; }
-    .los-banner-warning { background: #1c1407; color: #fde68a; border-color: #d97706; }
-    .los-banner-danger  { background: #1f0707; color: #fca5a5; border-color: #dc2626; }
+    .los-banner-info    { background: rgba(15, 23, 42, 0.75); color: #c7d2fe; border-color: #6366f1; border-top: 1px solid rgba(99, 102, 241, 0.15); border-right: 1px solid rgba(99, 102, 241, 0.15); border-bottom: 1px solid rgba(99, 102, 241, 0.15); }
+    .los-banner-success { background: rgba(5, 46, 22, 0.75); color: #86efac; border-color: #16a34a; border-top: 1px solid rgba(34, 197, 94, 0.15); border-right: 1px solid rgba(34, 197, 94, 0.15); border-bottom: 1px solid rgba(34, 197, 94, 0.15); }
+    .los-banner-warning { background: rgba(28, 20, 7, 0.75); color: #fde68a; border-color: #d97706; border-top: 1px solid rgba(245, 158, 11, 0.15); border-right: 1px solid rgba(245, 158, 11, 0.15); border-bottom: 1px solid rgba(245, 158, 11, 0.15); }
+    .los-banner-danger  { background: rgba(31, 7, 7, 0.75); color: #fca5a5; border-color: #dc2626; border-top: 1px solid rgba(239, 68, 68, 0.15); border-right: 1px solid rgba(239, 68, 68, 0.15); border-bottom: 1px solid rgba(239, 68, 68, 0.15); }
 
     /* ---- Empty state ---- */
     .los-empty {
         text-align: center;
-        padding: 3rem 2rem;
-        border: 1px dashed #1e293b;
-        border-radius: 10px;
-        margin: 0.5rem 0;
+        padding: 3.5rem 2rem;
+        border: 1px dashed rgba(255, 255, 255, 0.1);
+        border-radius: 14px;
+        margin: 0.75rem 0;
+        background: rgba(15, 23, 42, 0.3);
     }
-    .los-empty-icon { font-size: 2rem; margin-bottom: 0.75rem; display: block; opacity: 0.5; }
-    .los-empty-title { font-size: 0.95rem; font-weight: 600; color: #64748b; margin: 0 0 0.3rem 0; }
-    .los-empty-hint  { font-size: 0.82rem; color: #475569; margin: 0; line-height: 1.5; }
+    .los-empty-icon { font-size: 2.2rem; margin-bottom: 0.75rem; display: block; opacity: 0.6; }
+    .los-empty-title { font-size: 0.95rem; font-weight: 600; color: #94a3b8; margin: 0 0 0.35rem 0; }
+    .los-empty-hint  { font-size: 0.82rem; color: #64748b; margin: 0; line-height: 1.5; }
 
     /* ---- Insight card ---- */
     .los-insight {
-        background: #111927;
-        border: 1px solid #1e293b;
-        border-left: 2px solid #10b981;
-        border-radius: 8px;
-        padding: 0.75rem 1rem;
-        margin-bottom: 0.5rem;
+        background: linear-gradient(180deg, rgba(18, 26, 43, 0.7) 0%, rgba(13, 19, 32, 0.75) 100%);
+        backdrop-filter: blur(10px);
+        border: 1px solid rgba(255, 255, 255, 0.07);
+        border-left: 3px solid #10b981;
+        border-radius: 10px;
+        padding: 0.85rem 1.1rem;
+        margin-bottom: 0.6rem;
         color: #cbd5e1;
         font-size: 0.875rem;
         line-height: 1.5;
+        transition: all 0.15s ease;
+    }
+    .los-insight:hover {
+        border-color: rgba(16, 185, 129, 0.4);
+        transform: translateX(2px);
     }
 
-    /* ---- Consistency score ---- */
+    /* ---- Consistency score display ---- */
     .los-score-ring {
         text-align: center;
-        padding: 1.75rem 1rem;
-        background: #111927;
-        border: 1px solid #1e293b;
-        border-radius: 10px;
+        padding: 2rem 1.25rem;
+        background: linear-gradient(180deg, rgba(18, 26, 43, 0.8) 0%, rgba(13, 19, 32, 0.85) 100%);
+        backdrop-filter: blur(12px);
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        border-radius: 14px;
+        box-shadow: 0 4px 24px rgba(0, 0, 0, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.06);
     }
-    .los-score-label  { font-size: 0.68rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.1em; color: #475569; }
-    .los-score-number { font-size: 3rem; font-weight: 800; letter-spacing: -0.04em; color: #f8fafc; line-height: 1; margin: 0.4rem 0 0.1rem 0; }
-    .los-score-denom  { font-size: 0.8rem; color: #475569; }
-    .los-score-bar-row   { display: flex; align-items: center; gap: 0.75rem; margin-bottom: 0.55rem; font-size: 0.82rem; }
-    .los-score-bar-label { width: 4rem; color: #64748b; font-weight: 500; text-align: right; flex-shrink: 0; }
-    .los-score-bar-track { flex: 1; height: 5px; background: #1e293b; border-radius: 999px; overflow: hidden; }
-    .los-score-bar-fill  { height: 100%; border-radius: 999px; transition: width 0.5s ease; }
-    .los-score-bar-val   { width: 2.5rem; color: #e2e8f0; font-weight: 600; text-align: right; flex-shrink: 0; }
+    .los-score-label  { font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.1em; color: #64748b; }
+    .los-score-number { font-size: 3.2rem; font-weight: 800; letter-spacing: -0.04em; line-height: 1; margin: 0.5rem 0 0.15rem 0; text-shadow: 0 0 24px rgba(99, 102, 241, 0.2); }
+    .los-score-denom  { font-size: 0.8rem; color: #64748b; }
+    .los-score-bar-row   { display: flex; align-items: center; gap: 0.85rem; margin-bottom: 0.7rem; font-size: 0.85rem; }
+    .los-score-bar-label { width: 4.2rem; color: #94a3b8; font-weight: 600; text-align: right; flex-shrink: 0; font-size: 0.82rem; }
+    .los-score-bar-track { flex: 1; height: 7px; background: rgba(255, 255, 255, 0.06); border-radius: 999px; overflow: hidden; }
+    .los-score-bar-fill  { height: 100%; border-radius: 999px; transition: width 0.5s cubic-bezier(0.16, 1, 0.3, 1); }
+    .los-score-bar-val   { width: 2.6rem; color: #ffffff; font-weight: 700; text-align: right; flex-shrink: 0; }
 
     /* ---- Timer display ---- */
     .los-timer {
         text-align: center;
-        padding: 1.75rem 1rem;
-        background: #111927;
-        border: 1px solid #1e293b;
-        border-radius: 10px;
+        padding: 2rem 1.25rem;
+        background: linear-gradient(180deg, rgba(18, 26, 43, 0.8) 0%, rgba(13, 19, 32, 0.85) 100%);
+        backdrop-filter: blur(12px);
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        border-radius: 14px;
+        box-shadow: 0 4px 24px rgba(0, 0, 0, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.06);
     }
-    .los-timer-face    { font-size: 3rem; font-weight: 800; letter-spacing: 0.05em; color: #f8fafc; font-variant-numeric: tabular-nums; }
-    .los-timer-subject { font-size: 0.82rem; color: #6366f1; font-weight: 600; margin-top: 0.25rem; }
+    .los-timer-face    { font-size: 3.4rem; font-weight: 800; letter-spacing: 0.04em; color: #ffffff; font-variant-numeric: tabular-nums; text-shadow: 0 0 30px rgba(99, 102, 241, 0.3); }
+    .los-timer-subject { font-size: 0.88rem; color: #a5b4fc; font-weight: 600; margin-top: 0.4rem; }
 
     /* ---- Budget progress row ---- */
     .los-budget-row {
-        padding: 0.85rem 1rem;
-        background: #111927;
-        border: 1px solid #1e293b;
-        border-radius: 8px;
-        margin-bottom: 0.5rem;
+        padding: 0.95rem 1.15rem;
+        background: linear-gradient(180deg, rgba(18, 26, 43, 0.6) 0%, rgba(13, 19, 32, 0.65) 100%);
+        border: 1px solid rgba(255, 255, 255, 0.07);
+        border-radius: 10px;
+        margin-bottom: 0.6rem;
+        transition: all 0.15s ease;
     }
-    .los-budget-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.4rem; font-size: 0.875rem; }
-    .los-budget-name   { font-weight: 600; color: #e2e8f0; }
+    .los-budget-row:hover {
+        border-color: rgba(255, 255, 255, 0.14);
+        transform: translateY(-1px);
+    }
+    .los-budget-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.45rem; font-size: 0.88rem; }
+    .los-budget-name   { font-weight: 600; color: #f1f5f9; }
     .los-budget-spent  { color: #64748b; font-size: 0.78rem; }
-    .los-budget-track  { height: 4px; background: #1e293b; border-radius: 999px; overflow: hidden; margin-top: 0.4rem; }
-    .los-budget-fill   { height: 100%; border-radius: 999px; transition: width 0.4s ease; }
+    .los-budget-track  { height: 5px; background: rgba(255, 255, 255, 0.06); border-radius: 999px; overflow: hidden; margin-top: 0.45rem; }
+    .los-budget-fill   { height: 100%; border-radius: 999px; transition: width 0.4s cubic-bezier(0.16, 1, 0.3, 1); }
 
     /* ---- Priority task row ---- */
     .los-task-row {
         display: flex;
         align-items: center;
-        gap: 0.6rem;
-        padding: 0.55rem 0.75rem;
-        background: #111927;
-        border: 1px solid #1e293b;
-        border-radius: 8px;
-        margin-bottom: 0.35rem;
+        gap: 0.75rem;
+        padding: 0.7rem 0.9rem;
+        background: linear-gradient(180deg, rgba(18, 26, 43, 0.5) 0%, rgba(13, 19, 32, 0.55) 100%);
+        border: 1px solid rgba(255, 255, 255, 0.06);
+        border-radius: 9px;
+        margin-bottom: 0.45rem;
+        transition: all 0.15s ease;
     }
-    .los-task-label { flex: 1; font-size: 0.875rem; color: #e2e8f0; font-weight: 500; }
+    .los-task-row:hover {
+        background: rgba(25, 36, 60, 0.6);
+        border-color: rgba(255, 255, 255, 0.12);
+    }
+    .los-task-label { flex: 1; font-size: 0.875rem; color: #f1f5f9; font-weight: 500; }
     .los-task-done  { color: #64748b; text-decoration: line-through; }
 
     /* ---- Transaction row ---- */
@@ -620,118 +727,82 @@ def inject_custom_css():
         display: flex;
         justify-content: space-between;
         align-items: center;
-        padding: 0.7rem 0;
-        border-bottom: 1px solid #1e293b;
+        padding: 0.75rem 0.25rem;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.06);
     }
     .los-tx-row:last-child { border-bottom: none; }
-    .los-tx-left  { display: flex; flex-direction: column; gap: 0.1rem; }
-    .los-tx-title { font-size: 0.875rem; font-weight: 500; color: #e2e8f0; }
+    .los-tx-left  { display: flex; flex-direction: column; gap: 0.15rem; }
+    .los-tx-title { font-size: 0.88rem; font-weight: 600; color: #f1f5f9; }
     .los-tx-meta  { font-size: 0.75rem; color: #64748b; }
-    .los-tx-amount { font-size: 0.95rem; font-weight: 600; color: #f8fafc; letter-spacing: -0.01em; }
+    .los-tx-amount { font-size: 0.98rem; font-weight: 700; color: #ffffff; letter-spacing: -0.01em; }
 
     /* ---- Choice cards (onboarding) ---- */
     .los-choice-card {
-        background: #111927;
-        border: 1px solid #1e293b;
-        border-radius: 12px;
-        padding: 2rem 1.5rem;
+        background: linear-gradient(180deg, rgba(18, 26, 43, 0.75) 0%, rgba(13, 19, 32, 0.75) 100%);
+        backdrop-filter: blur(12px);
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        border-radius: 14px;
+        padding: 2.25rem 1.75rem;
         text-align: center;
-        transition: border-color 0.15s;
+        transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
     }
-    .los-choice-card:hover { border-color: #334155; }
-    .los-choice-icon  { font-size: 2.5rem; display: block; margin-bottom: 0.75rem; }
-    .los-choice-title { font-size: 1.05rem; font-weight: 700; color: #f8fafc; margin: 0 0 0.4rem 0; }
-    .los-choice-desc  { font-size: 0.82rem; color: #64748b; line-height: 1.55; margin: 0; }
+    .los-choice-card:hover { 
+        border-color: rgba(99, 102, 241, 0.4);
+        transform: translateY(-3px);
+        box-shadow: 0 12px 30px rgba(0, 0, 0, 0.5), 0 0 20px rgba(99, 102, 241, 0.15);
+    }
+    .los-choice-icon  { font-size: 2.75rem; display: block; margin-bottom: 0.85rem; }
+    .los-choice-title { font-size: 1.15rem; font-weight: 700; color: #ffffff; margin: 0 0 0.45rem 0; letter-spacing: -0.02em; }
+    .los-choice-desc  { font-size: 0.84rem; color: #94a3b8; line-height: 1.55; margin: 0; }
 
     /* ---- Auth screen ---- */
     .los-auth-card {
-        max-width: 420px;
+        max-width: 440px;
         margin: 0 auto;
         padding: 2.5rem;
-        background: #111927;
-        border: 1px solid #1e293b;
-        border-radius: 14px;
-    }
-    .los-auth-brand {
-        text-align: center;
-        margin-bottom: 2rem;
-    }
-    .los-auth-logo {
-        font-size: 1.5rem;
-        font-weight: 800;
-        letter-spacing: -0.03em;
-        color: #f8fafc;
-    }
-    .los-auth-tagline {
-        font-size: 0.82rem;
-        color: #475569;
-        margin-top: 0.2rem;
-    }
-    .los-auth-title {
-        font-size: 1.25rem;
-        font-weight: 700;
-        color: #f8fafc;
-        margin: 0 0 1.5rem 0;
-        letter-spacing: -0.02em;
+        background: linear-gradient(180deg, rgba(18, 26, 43, 0.85) 0%, rgba(13, 19, 32, 0.9) 100%);
+        backdrop-filter: blur(16px);
+        border: 1px solid rgba(255, 255, 255, 0.09);
+        border-radius: 16px;
+        box-shadow: 0 16px 48px rgba(0, 0, 0, 0.6), inset 0 1px 0 rgba(255, 255, 255, 0.08);
     }
 
     /* ---- User profile pill (sidebar) ---- */
-    .los-user-pill {
-        display: flex;
-        align-items: center;
-        gap: 0.6rem;
-        padding: 0.6rem 0.8rem;
-        background: #0d1424;
-        border: 1px solid #1a2540;
-        border-radius: 8px;
-        margin: 0.5rem 0;
-    }
-    .los-user-avatar {
-        width: 30px;
-        height: 30px;
-        border-radius: 50%;
-        background: #1e1b4b;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        font-size: 0.8rem;
-        font-weight: 700;
-        color: #a5b4fc;
-        flex-shrink: 0;
-    }
-    .los-user-name  { font-size: 0.82rem; font-weight: 600; color: #e2e8f0; line-height: 1.2; }
-    .los-user-email { font-size: 0.72rem; color: #475569; line-height: 1.2; }
-
-    /* Sidebar profile card at bottom */
     .los-sidebar-profile {
         display: flex;
         align-items: center;
-        gap: 0.65rem;
-        padding: 0.6rem 0.75rem;
-        background: #111927;
-        border: 1px solid #1e293b;
-        border-radius: 9px;
-        margin-top: 0.5rem;
+        gap: 0.75rem;
+        padding: 0.7rem 0.85rem;
+        background: linear-gradient(180deg, rgba(18, 26, 43, 0.6) 0%, rgba(13, 19, 32, 0.65) 100%);
+        border: 1px solid rgba(255, 255, 255, 0.07);
+        border-radius: 11px;
+        margin-top: 0.75rem;
         margin-bottom: 0.5rem;
+        transition: all 0.15s ease;
+    }
+    .los-sidebar-profile:hover {
+        background: rgba(25, 36, 60, 0.7);
+        border-color: rgba(255, 255, 255, 0.12);
     }
     .los-sidebar-avatar {
-        width: 34px;
-        height: 34px;
+        width: 36px;
+        height: 36px;
         border-radius: 50%;
-        background: #1e1b4b;
-        border: 1px solid #3730a3;
+        background: linear-gradient(135deg, #4338ca 0%, #312e81 100%);
+        border: 1.5px solid rgba(99, 102, 241, 0.4);
         display: flex;
         align-items: center;
         justify-content: center;
-        font-size: 0.82rem;
+        font-size: 0.88rem;
         font-weight: 700;
-        color: #a5b4fc;
+        color: #c7d2fe;
         flex-shrink: 0;
+        box-shadow: 0 0 12px rgba(99, 102, 241, 0.2);
     }
     .los-sidebar-name {
-        font-size: 0.83rem;
+        font-size: 0.85rem;
         font-weight: 600;
-        color: #f8fafc;
+        color: #ffffff;
         line-height: 1.25;
         white-space: nowrap;
         overflow: hidden;
@@ -793,12 +864,14 @@ def metric_card(label: str, value: str, subtitle: str = "", accent_color: str = 
     if delta:
         cls = f"los-metric-delta-{delta_type}"
         arrow = "↑ " if delta_type == "up" else ("↓ " if delta_type == "down" else "")
-        delta_html = f'<p class="{cls}">{arrow}{delta}</p>'
+        delta_html = f'<div class="los-metric-delta-pill {cls}"><span>{arrow}{delta}</span></div>'
     sub_html = f'<p class="los-metric-sub">{subtitle}</p>' if subtitle else ""
     st.markdown(
-        f'<div class="los-metric" style="border-left-color:{accent_color};">'
+        f'<div class="los-metric" style="border-left: 3px solid {accent_color};">'
+        f'<div>'
         f'<p class="los-metric-label">{label}</p>'
         f'<p class="los-metric-value">{value}</p>'
+        f'</div>'
         f'{delta_html}'
         f'{sub_html}'
         f'</div>',

@@ -67,25 +67,29 @@ def _render_login():
     finally:
         db.close()
 
-    st.markdown("<div style='height:3rem;'></div>", unsafe_allow_html=True)
+    st.markdown("<div style='height:2.5rem;'></div>", unsafe_allow_html=True)
     # Center the auth card
-    _, col, _ = st.columns([1, 1.2, 1])
+    _, col, _ = st.columns([1, 1.25, 1])
     with col:
         st.markdown(
             """
             <div style="text-align:center; margin-bottom:2rem;">
-                <div style="font-size:1.6rem; font-weight:800; letter-spacing:-0.03em; color:#f8fafc; margin-bottom:0.3rem;">LifeOS</div>
-                <div style="font-size:0.875rem; color:#475569;">Personal Analytics Platform</div>
+                <div style="font-size:1.85rem; font-weight:800; letter-spacing:-0.035em; color:#ffffff; margin-bottom:0.25rem;">LifeOS</div>
+                <div style="font-size:0.875rem; color:#64748b;">Personal Analytics & Intelligence Platform</div>
             </div>
-            <div style="font-size:1.2rem; font-weight:700; color:#f8fafc; margin-bottom:1.5rem; letter-spacing:-0.02em;">Sign In</div>
             """,
             unsafe_allow_html=True,
         )
 
         with st.form("login_form", clear_on_submit=False):
+            st.markdown(
+                '<div style="font-size:1.15rem; font-weight:700; color:#ffffff; margin-bottom:1.25rem; letter-spacing:-0.02em;">Sign In</div>',
+                unsafe_allow_html=True,
+            )
             email = st.text_input("Email", placeholder="you@example.com", key="login_email")
             password = st.text_input("Password", type="password", placeholder="••••••••", key="login_password")
-            submitted = st.form_submit_button("Sign in", type="primary", use_container_width=True)
+            st.markdown("<div style='height:0.5rem;'></div>", unsafe_allow_html=True)
+            submitted = st.form_submit_button("Sign In →", type="primary", use_container_width=True)
 
             if submitted:
                 if not email or not password:
@@ -105,7 +109,7 @@ def _render_login():
                         db.close()
 
         st.markdown(
-            "<p style='text-align:center; font-size:0.82rem; color:#475569; margin-top:1rem;'>"
+            "<p style='text-align:center; font-size:0.84rem; color:#64748b; margin-top:1.25rem;'>"
             "Don't have an account?</p>",
             unsafe_allow_html=True,
         )
@@ -136,16 +140,15 @@ def _render_signup():
     finally:
         db.close()
 
-    st.markdown("<div style='height:3rem;'></div>", unsafe_allow_html=True)
-    _, col, _ = st.columns([1, 1.2, 1])
+    st.markdown("<div style='height:2.5rem;'></div>", unsafe_allow_html=True)
+    _, col, _ = st.columns([1, 1.25, 1])
     with col:
         st.markdown(
             """
             <div style="text-align:center; margin-bottom:2rem;">
-                <div style="font-size:1.6rem; font-weight:800; letter-spacing:-0.03em; color:#f8fafc; margin-bottom:0.3rem;">LifeOS</div>
-                <div style="font-size:0.875rem; color:#475569;">Personal Analytics Platform</div>
+                <div style="font-size:1.85rem; font-weight:800; letter-spacing:-0.035em; color:#ffffff; margin-bottom:0.25rem;">LifeOS</div>
+                <div style="font-size:0.875rem; color:#64748b;">Personal Analytics & Intelligence Platform</div>
             </div>
-            <div style="font-size:1.2rem; font-weight:700; color:#f8fafc; margin-bottom:1.5rem; letter-spacing:-0.02em;">Create your account</div>
             """,
             unsafe_allow_html=True,
         )
@@ -159,11 +162,16 @@ def _render_signup():
             )
 
         with st.form("signup_form", clear_on_submit=False):
+            st.markdown(
+                '<div style="font-size:1.15rem; font-weight:700; color:#ffffff; margin-bottom:1.25rem; letter-spacing:-0.02em;">Create Account</div>',
+                unsafe_allow_html=True,
+            )
             name = st.text_input("Name", placeholder="Your full name", key="signup_name")
             email = st.text_input("Email", placeholder="you@example.com", key="signup_email")
             password = st.text_input("Password", type="password", placeholder="Min. 8 characters", key="signup_password")
             confirm = st.text_input("Confirm password", type="password", placeholder="••••••••", key="signup_confirm")
-            submitted = st.form_submit_button("Create account", type="primary", use_container_width=True)
+            st.markdown("<div style='height:0.5rem;'></div>", unsafe_allow_html=True)
+            submitted = st.form_submit_button("Create Account →", type="primary", use_container_width=True)
 
             if submitted:
                 if not name or not email or not password or not confirm:
@@ -182,9 +190,7 @@ def _render_signup():
                             claim_legacy_data=claim_legacy,
                         )
                         if success and user:
-                            # For fresh users, run onboarding via Settings
                             auth_utils.login_user(user)
-                            # If they didn't claim legacy data, they need profile setup
                             from modules.settings import crud as settings_crud
                             profile = settings_crud.get_user_profile(db, user.id)
                             if not profile:
@@ -193,13 +199,13 @@ def _render_signup():
                             st.rerun()
                         else:
                             st.error(message)
-                    except Exception as e:
+                    except Exception:
                         st.error("Something went wrong. Please try again.")
                     finally:
                         db.close()
 
         st.markdown(
-            "<p style='text-align:center; font-size:0.82rem; color:#475569; margin-top:1rem;'>"
+            "<p style='text-align:center; font-size:0.84rem; color:#64748b; margin-top:1.25rem;'>"
             "Already have an account?</p>",
             unsafe_allow_html=True,
         )
@@ -212,17 +218,21 @@ def _render_signup():
 # Authenticated Application Shell
 # ---------------------------------------------------------------------------
 
+def _set_active_page(page_name: str):
+    st.session_state.page = page_name
+
+
 def _render_sidebar(user_id: int) -> str:
     """Renders the primary sidebar navigation. Returns current page name."""
 
     # Brand mark & Navigation section header
     st.sidebar.markdown(
         """
-        <div style="padding:1.25rem 1rem 0.75rem 1rem; border-bottom:1px solid #1a2540; margin-bottom:0.75rem;">
-            <div style="font-size:1.15rem; font-weight:800; letter-spacing:-0.03em; color:#f8fafc;">LifeOS</div>
-            <div style="font-size:0.7rem; color:#475569; font-weight:600; letter-spacing:0.06em; text-transform:uppercase; margin-top:0.15rem;">Analytics Platform</div>
+        <div style="padding:1.1rem 0.5rem 0.85rem 0.5rem; border-bottom:1px solid rgba(255,255,255,0.07); margin-bottom:0.9rem;">
+            <div style="font-size:1.15rem; font-weight:800; letter-spacing:-0.03em; color:#ffffff; line-height:1.1;">LifeOS</div>
+            <div style="font-size:0.65rem; color:#64748b; font-weight:700; letter-spacing:0.08em; text-transform:uppercase; margin-top:0.2rem;">Workspace</div>
         </div>
-        <div style="font-size:0.7rem; font-weight:700; color:#475569; text-transform:uppercase; letter-spacing:0.08em; padding:0.2rem 0.5rem 0.4rem 0.5rem;">Navigation</div>
+        <div style="font-size:0.68rem; font-weight:700; color:#475569; text-transform:uppercase; letter-spacing:0.09em; padding:0.2rem 0.5rem 0.4rem 0.5rem;">Navigation</div>
         """,
         unsafe_allow_html=True,
     )
@@ -230,13 +240,18 @@ def _render_sidebar(user_id: int) -> str:
     if "page" not in st.session_state:
         st.session_state.page = "Dashboard"
 
-    # Primary navigation items ONLY
+    # Primary navigation items ONLY (on_click ensures button types render accurately for the target page)
     for name, label in NAV_ITEMS:
         is_active = st.session_state.page == name
         btn_type = "primary" if is_active else "secondary"
-        if st.sidebar.button(label, key=f"nav_{name}", type=btn_type, use_container_width=True):
-            st.session_state.page = name
-            st.rerun()
+        st.sidebar.button(
+            label,
+            key=f"nav_{name}",
+            type=btn_type,
+            use_container_width=True,
+            on_click=_set_active_page,
+            args=(name,),
+        )
 
     return st.session_state.page
 
